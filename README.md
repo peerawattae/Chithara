@@ -36,11 +36,9 @@ Follow these instructions to set up the project on your local machine.
      ```
 
 4. **Install dependencies:**
-   *(If a `requirements.txt` is added to the project, you should run `pip install -r requirements.txt`)*
-   
-   To manually install the base requirements for this Django project:
+   Install the required packages using the `requirements.txt` file:
    ```bash
-   pip install django
+   pip install -r requirements.txt
    ```
 
 5. **Apply database migrations:**
