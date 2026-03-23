@@ -5,8 +5,6 @@ from user.models import User
 class Listener(User):
     """
     A User whose main interest is listening to shared songs.
-    Inherits from User (multi-table inheritance).
-    No extra domain fields in the diagram.
     """
 
     class Meta:

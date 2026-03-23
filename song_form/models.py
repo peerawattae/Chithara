@@ -1,10 +1,9 @@
 from django.db import models
-
+from creator.models import Creator
 
 class GenreChoices(models.TextChoices):
     """
-    Enumeration from diagram: Genre
-    Values: pop, hiphop, rock, reggae, country, R&B, EDM
+    Enumerate class Genre
     """
     POP     = "pop",     "Pop"
     HIPHOP  = "hiphop",  "Hip-Hop"
@@ -18,10 +17,13 @@ class GenreChoices(models.TextChoices):
 class SongForm(models.Model):
     """
     Input form used by a Creator to generate a Song.
-    Diagram fields: occasion, genre (Genre enum), voice_type, mood, detail.
-    1-to-1 with Song (has a relationship in diagram).
-    Persists even if Song generation fails (A4).
     """
+
+    creator    = models.ForeignKey(
+                     Creator,
+                     on_delete=models.CASCADE,
+                     related_name="song_forms"
+                 )
     occasion   = models.CharField(max_length=255)
     genre      = models.CharField(max_length=20, choices=GenreChoices.choices)
     voice_type = models.CharField(max_length=100)
