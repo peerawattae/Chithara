@@ -3,7 +3,6 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = "django-insecure-music-ai-dev-key-change-in-production"
-
 DEBUG = True
 ALLOWED_HOSTS = ["*"]
 
@@ -14,13 +13,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    # Domain apps — order matters for FK resolution
-    "user.apps.UserConfig",
-    "creator.apps.CreatorConfig",
-    "listener.apps.ListenerConfig",
-    "library.apps.LibraryConfig",
-    "song_form.apps.SongFormConfig",
-    "song.apps.SongConfig",
+    "core.apps.CoreConfig",
 ]
 
 MIDDLEWARE = [
@@ -31,7 +24,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
 ]
 
-ROOT_URLCONF = "backend.urls"
+ROOT_URLCONF = "music_ai.urls"
 
 TEMPLATES = [
     {
@@ -48,7 +41,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "backend.wsgi.application"
+WSGI_APPLICATION = "music_ai.wsgi.application"
 
 DATABASES = {
     "default": {
