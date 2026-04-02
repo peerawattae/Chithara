@@ -1,12 +1,10 @@
 from django.urls import path
-from .views import (
-    UserListCreateView, UserDetailView,
-    CreatorListCreateView, CreatorDetailView,
-    ListenerListCreateView, ListenerDetailView,
-    LibraryListView, LibraryDetailView,
-    SongFormListCreateView, SongFormDetailView,
-    SongListCreateView, SongDetailView,
-)
+from .views.user import UserListCreateView, UserDetailView
+from .views.creator import CreatorListCreateView, CreatorDetailView
+from .views.listener import ListenerListCreateView, ListenerDetailView
+from .views.library import LibraryListView, LibraryDetailView
+from .views.song_form import SongFormListCreateView, SongFormDetailView
+from .views.song import SongListCreateView, SongDetailView
 
 urlpatterns = [
     # Users
