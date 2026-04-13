@@ -1,0 +1,75 @@
+from django.http import JsonResponse
+from django.views import View
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+
+from ..models import Library, SongForm, Song, GenerateStatus
+from .helpers import parse_json, not_found
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class SongListCreateView(View):
+    def get(self, request):
+        return JsonResponse(
+            list(Song.objects.values(
+                "id", "title", "status", "song_link",
+                "created_by", "duration", "create_at", "cover_image", "library_id",
+            )),
+            safe=False,
+        )
+
+    def post(self, request):
+        d = parse_json(request)
+        library   = Library.objects.get(pk=d["library_id"]) if d.get("library_id") else None
+        song_form = SongForm.objects.get(pk=d["song_form_id"]) if d.get("song_form_id") else None
+        song = Song.objects.create(
+            title=d["title"],
+            status=d.get("status", GenerateStatus.IN_PROGRESS),
+            song_link=d.get("song_link"),
+            created_by=d["created_by"],
+            duration=d.get("duration", 0),
+            cover_image=d.get("cover_image"),
+            library=library,
+            song_form=song_form,
+        )
+        return JsonResponse({"id": song.id, "title": song.title, "status": song.status}, status=201)
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class SongDetailView(View):
+    def _get(self, pk):
+        try:
+            return Song.objects.get(pk=pk)
+        except Song.DoesNotExist:
+            return None
+
+    def get(self, request, pk):
+        s = self._get(pk)
+        if not s:
+            return not_found()
+        return JsonResponse({
+            "id": s.id, "title": s.title, "status": s.status,
+            "song_link": s.song_link, "created_by": s.created_by,
+            "duration": s.duration, "create_at": str(s.create_at),
+            "cover_image": s.cover_image, "library_id": s.library_id,
+        })
+
+    def put(self, request, pk):
+        s = self._get(pk)
+        if not s:
+            return not_found()
+        d = parse_json(request)
+        s.title       = d.get("title",       s.title)
+        s.status      = d.get("status",      s.status)
+        s.song_link   = d.get("song_link",   s.song_link)
+        s.duration    = d.get("duration",    s.duration)
+        s.cover_image = d.get("cover_image", s.cover_image)
+        s.save()
+        return JsonResponse({"id": s.id, "title": s.title, "status": s.status})
+
+    def delete(self, request, pk):
+        s = self._get(pk)
+        if not s:
+            return not_found()
+        s.delete()
+        return JsonResponse({"deleted": True}, status=204)
