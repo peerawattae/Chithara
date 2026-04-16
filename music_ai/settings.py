@@ -52,3 +52,9 @@ DATABASES = {
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 STATIC_URL = "/static/"
+
+# ── Generation Strategy ──────────────────────────────────────────
+# Set to "mock" for offline dev/testing, "suno" for real API calls
+# Override via environment variable:  GENERATOR_STRATEGY=suno
+import os
+GENERATOR_STRATEGY = os.environ.get("GENERATOR_STRATEGY", "mock")
