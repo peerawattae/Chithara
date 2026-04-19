@@ -8,10 +8,9 @@ def get_generator() -> SongGeneratorStrategy:
     Central factory — returns the active strategy based on
     the GENERATOR_STRATEGY Django setting.
 
-    "mock" → MockSongGeneratorStrategy  (default, offline)
-    "suno" → SunoSongGeneratorStrategy  (Phase 4, real API)
+    "mock" → MockSongGeneratorStrategy
+    "suno" → SunoSongGeneratorStrategy
 
-    Never use if/else outside this function to pick a strategy.
     """
     strategy = getattr(settings, "GENERATOR_STRATEGY", "mock")
 

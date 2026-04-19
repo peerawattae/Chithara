@@ -39,6 +39,5 @@ class SongGeneratorStrategy(ABC):
         """
         Generate a song from the given request.
         Returns a GenerationResult on success.
-        Raises an exception on failure — caller is responsible for handling.
         """
         ...
