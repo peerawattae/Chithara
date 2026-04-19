@@ -3,7 +3,8 @@ from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 
-from ..models import User, Creator, Library, SongForm
+from ..models import User, Creator, Library, SongForm, Song, GenerateStatus
+from ..generation import get_generator, GenerationRequest
 from .helpers import parse_json, not_found
 
 
@@ -11,29 +12,44 @@ from .helpers import parse_json, not_found
 class SongFormListCreateView(View):
     def get(self, request):
         return JsonResponse(
-            list(SongForm.objects.values("id", "creator__name", "occasion", "genre", "voice_type", "mood", "detail", "created_at")),
+            list(SongForm.objects.values(
+                "id", "creator__name", "occasion", "genre",
+                "voice_type", "mood", "detail", "created_at"
+            )),
             safe=False,
         )
 
     def post(self, request):
-        """
-        On POST:
-        1. get_or_create Creator for the given user
-        2. get_or_create Library for that Creator
-        3. Create SongForm
-        The actual AI generation call would happen here too (not implemented yet).
-        """
         d = parse_json(request)
+ 
+        # Get or create Creator directly by user id
+        try:
+            creator = Creator.objects.get(pk=d["user_id"])
+            creator_created = False
+        except Creator.DoesNotExist:
+            # Grab the existing user row data first
+            user = User.objects.get(pk=d["user_id"])
+            # Use raw update to add the creator row without touching core_user
+            from django.db import connection
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "INSERT INTO core_creator (user_ptr_id, quota) VALUES (%s, %s)",
+                    [user.pk, 20]
+                )
+            creator = Creator.objects.get(pk=d["user_id"])
+            creator_created = True
 
-        # User becomes Creator automatically on first submission
-        user = User.objects.get(pk=d["user_id"])
-        creator, creator_created = Creator.objects.get_or_create(
-            user_ptr=user,
-            defaults={"quota": 20},
-        )
         if creator_created:
             Library.objects.create(owner=creator)
 
+        #Enforce daily quota
+        if creator.quota <= 0:
+            return JsonResponse(
+                {"error": "Daily generation limit reached (max 20 songs per day)"},
+                status=429,
+            )
+
+        #Create SongForm
         sf = SongForm.objects.create(
             creator=creator,
             occasion=d["occasion"],
@@ -42,7 +58,60 @@ class SongFormListCreateView(View):
             mood=d["mood"],
             detail=d.get("detail", ""),
         )
-        return JsonResponse({"id": sf.id, "genre": sf.genre, "creator": creator.name}, status=201)
+
+        #Create Song with IN_PROGRESS status
+        library = Library.objects.get(owner=creator)
+        song = Song.objects.create(
+            title=d["title"],
+            status=GenerateStatus.IN_PROGRESS,
+            created_by=creator.name,
+            library=library,
+            song_form=sf,
+        )
+
+        #Call the active generation strategy
+        try:
+            gen_request = GenerationRequest(
+                title=d["title"],
+                occasion=d["occasion"],
+                genre=d["genre"],
+                voice_type=d["voice_type"],
+                mood=d["mood"],
+                detail=d.get("detail", ""),
+            )
+            result = get_generator().generate(gen_request)
+
+            #Generation succeeded — update Song
+            song.song_link = result.song_link
+            song.duration  = result.duration
+            song.status    = GenerateStatus.SUCCESS
+            song.save()
+
+            #Deduct quota only on success
+            creator.quota -= 1
+            creator.save()
+
+            return JsonResponse({
+                "song_id":   song.id,
+                "title":     song.title,
+                "status":    song.status,
+                "song_link": song.song_link,
+                "duration":  song.duration,
+                "task_id":   result.task_id,
+            }, status=201)
+
+        except Exception as e:
+            #Generation failed — mark Song as FAILED
+            # Quota is NOT deducted on failure (BR2)
+            song.status = GenerateStatus.FAILED
+            song.save()
+
+            return JsonResponse({
+                "song_id": song.id,
+                "title":   song.title,
+                "status":  song.status,
+                "error":   str(e),
+            }, status=500)
 
 
 @method_decorator(csrf_exempt, name="dispatch")
@@ -58,9 +127,13 @@ class SongFormDetailView(View):
         if not sf:
             return not_found()
         return JsonResponse({
-            "id": sf.id, "creator": sf.creator.name,
-            "occasion": sf.occasion, "genre": sf.genre,
-            "voice_type": sf.voice_type, "mood": sf.mood, "detail": sf.detail,
+            "id":         sf.id,
+            "creator":    sf.creator.name,
+            "occasion":   sf.occasion,
+            "genre":      sf.genre,
+            "voice_type": sf.voice_type,
+            "mood":       sf.mood,
+            "detail":     sf.detail,
         })
 
     def put(self, request, pk):
