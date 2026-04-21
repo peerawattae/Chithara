@@ -58,3 +58,127 @@ Follow these instructions to set up the project on your local machine.
    python manage.py runserver
    ```
    The application should now be running. You can view it in your browser at `http://127.0.0.1:8000/`.
+
+---
+
+## Exercise 4 — Strategy Pattern (Song Generation)
+
+### Overview
+
+Song generation uses the **Strategy Pattern** to allow swapping between a Mock strategy (offline, no API key needed) and the Suno API strategy (real AI generation) without changing any other code.
+
+```
+SongGeneratorStrategy  (abstract base class)
+├── MockSongGeneratorStrategy   → instant, deterministic, no network
+└── SunoSongGeneratorStrategy   → calls api.sunoapi.org, polls for result
+```
+
+The active strategy is selected via the `GENERATOR_STRATEGY` environment variable, read in `music_ai/settings.py`. Strategy selection is centralized in `core/generation/factory.py` — no if/else logic is scattered elsewhere.
+
+---
+
+### Setting up the Suno API Key
+
+1. Sign up at [sunoapi.org](https://sunoapi.org) and get your API key from the dashboard.
+
+2. Create a `.env` file in the project root (never commit this file):
+   ```
+   SUNO_API_KEY=your_actual_key_here
+   GENERATOR_STRATEGY=suno
+   ```
+
+3. `.env` is already listed in `.gitignore` — your key will not be committed.
+
+---
+
+### How to run in Mock mode (default)
+
+No API key required. Returns a placeholder audio URL instantly.
+
+```bash
+# Option A — set in .env
+GENERATOR_STRATEGY=mock
+
+# Option B — inline
+GENERATOR_STRATEGY=mock python manage.py runserver
+```
+
+Test with Postman or curl:
+```bash
+curl -X POST http://127.0.0.1:8000/api/song-forms/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_id": 1,
+    "title": "Morning Vibes",
+    "occasion": "casual",
+    "genre": "pop",
+    "voice_type": "female",
+    "mood": "light and calm",
+    "detail": "soft acoustic guitar"
+  }'
+```
+
+Expected response (instant):
+```json
+{
+  "song_id": 1,
+  "title": "Morning Vibes",
+  "status": "success",
+  "song_link": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+  "duration": 120,
+  "task_id": "mock-morning-vibes"
+}
+```
+Demonstration
+![Chithara Preview](./assets/test_mock_strategy.png)
+
+---
+
+### How to run in Suno mode
+
+Requires a valid `SUNO_API_KEY`. Generation takes 2–3 minutes while the server polls for completion.
+
+```bash
+# Option A — set in .env
+GENERATOR_STRATEGY=suno
+SUNO_API_KEY=your_key_here
+
+# Option B — inline
+GENERATOR_STRATEGY=suno SUNO_API_KEY=your_key python manage.py runserver
+```
+
+Send the same Postman request as above. You will see polling logs in the terminal:
+```
+[Suno] Task created: 35d98d3a77345d036ea088b53af4eee0
+[Suno] Attempt 1/40 — status: PENDING
+[Suno] Attempt 2/40 — status: PENDING
+[Suno] Attempt 3/40 — status: TEXT_SUCCESS
+[Suno] Attempt 9/40 — status: FIRST_SUCCESS
+[Suno] Attempt 12/40 — status: SUCCESS
+```
+
+Expected response (after ~2–3 minutes):
+```json
+{
+  "song_id": 2,
+  "title": "Morning Vibes",
+  "status": "success",
+  "song_link": "https://musicfile.removeai.ai/...",
+  "duration": 180,
+  "task_id": "35d98d3a77345d036ea088b53af4eee0"
+}
+```
+Demonstration
+![Chithara Preview](./assets/test_suno_strategy.png)
+
+---
+
+### Strategy file locations
+
+| File | Purpose |
+|---|---|
+| `core/generation/base.py` | Abstract interface + `GenerationRequest` / `GenerationResult` dataclasses |
+| `core/generation/mock.py` | Mock strategy — offline, deterministic |
+| `core/generation/suno.py` | Suno strategy — calls `api.sunoapi.org` |
+| `core/generation/factory.py` | `get_generator()` — single centralized strategy selector |
+| `music_ai/settings.py` | `GENERATOR_STRATEGY` setting (reads from env var) |

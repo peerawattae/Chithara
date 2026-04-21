@@ -1,5 +1,12 @@
 from pathlib import Path
+import os
 
+# Load .env file if present
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = "django-insecure-music-ai-dev-key-change-in-production"
@@ -52,3 +59,7 @@ DATABASES = {
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 STATIC_URL = "/static/"
+
+# Set to "mock" for offline dev/testing, "suno" for real API calls
+GENERATOR_STRATEGY = os.environ.get("GENERATOR_STRATEGY", "mock")
+SUNO_API_KEY       = os.environ.get("SUNO_API_KEY", "")
