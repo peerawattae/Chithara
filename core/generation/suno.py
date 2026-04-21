@@ -47,16 +47,14 @@ class SunoSongGeneratorStrategy(SongGeneratorStrategy):
         return ". ".join(parts)
 
     def _create_task(self, request: GenerationRequest) -> str:
-        """
-        POST to generate endpoint, return taskId.
-        """
         payload = {
-            "customMode": False,          # let Suno auto-generate lyrics
+            "customMode": False,
             "instrumental": False,
             "model": "V4_5ALL",
             "prompt": self._build_prompt(request),
             "style": request.genre,
             "title": request.title,
+            "callBackUrl": "https://httpbin.org/post",
         }
 
         response = requests.post(
@@ -65,42 +63,50 @@ class SunoSongGeneratorStrategy(SongGeneratorStrategy):
             headers=self._headers(),
             timeout=30,
         )
+
+        print("[Suno] Status code:", response.status_code)
+        print("[Suno] Raw response:", response.text)
+
         response.raise_for_status()
         data = response.json()
 
-        # API returns { "data": { "taskId": "..." } }
+        # Check for API-level errors (Suno returns HTTP 200 even on errors)
+        code = data.get("code")
+        msg  = data.get("msg", "Unknown error")
+
+        if code == 429:
+            raise RuntimeError(f"Suno credits insufficient — please top up your account: {msg}")
+        if code != 200:
+            raise RuntimeError(f"Suno API error (code {code}): {msg}")
+
         task_id = data.get("data", {}).get("taskId")
         if not task_id:
             raise ValueError(f"No taskId in response: {data}")
         return task_id
 
     def _poll_for_result(self, task_id: str) -> dict:
-        """
-        Poll record-info until terminal status or timeout.
-        Returns the first completed clip data.
-        """
         for attempt in range(1, self.MAX_ATTEMPTS + 1):
             response = requests.get(
                 f"{self.BASE_URL}/api/v1/generate/record-info",
                 headers=self._headers(),
                 params={"taskId": task_id},
                 timeout=30,
-            )
-            response.raise_for_status()
-            data = response.json()
+        )
+        response.raise_for_status()
+        data = response.json()
+        print(f"[Suno] Raw poll response: {data}")
+        status    = data.get("data", {}).get("status", "")
+        suno_data = data.get("data", {}).get("response", {}).get("sunoData", [])
 
-            status = data.get("data", {}).get("status", "")
-            clips  = data.get("data", {}).get("clips", [])
+        print(f"[Suno] Attempt {attempt}/{self.MAX_ATTEMPTS} — status: {status}")
 
-            print(f"[Suno] Attempt {attempt}/{self.MAX_ATTEMPTS} — status: {status}")
+        if status == self.TERMINAL_SUCCESS and suno_data:
+            return suno_data[0]  # return first track
 
-            if status == self.TERMINAL_SUCCESS and clips:
-                return clips[0]   # return first generated clip
+        if status == self.TERMINAL_FAIL:
+            raise RuntimeError(f"Suno generation failed for taskId: {task_id}")
 
-            if status == self.TERMINAL_FAIL:
-                raise RuntimeError(f"Suno generation failed for taskId: {task_id}")
-
-            time.sleep(self.POLL_INTERVAL)
+        time.sleep(self.POLL_INTERVAL)
 
         raise TimeoutError(
             f"Suno generation timed out after "

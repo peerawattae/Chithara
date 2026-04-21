@@ -87,7 +87,6 @@ class SongFormListCreateView(View):
             song.status    = GenerateStatus.SUCCESS
             song.save()
 
-            #Deduct quota only on success
             creator.quota -= 1
             creator.save()
 
@@ -99,6 +98,31 @@ class SongFormListCreateView(View):
                 "duration":  song.duration,
                 "task_id":   result.task_id,
             }, status=201)
+
+        except RuntimeError as e:
+            song.status = GenerateStatus.FAILED
+            song.save()
+
+            # Detect credit error specifically
+            error_msg = str(e)
+            status_code = 402 if "credits insufficient" in error_msg else 500
+            return JsonResponse({
+                "song_id": song.id,
+                "title":   song.title,
+                "status":  song.status,
+                "error":   error_msg,
+            }, status=status_code)
+
+        except Exception as e:
+            song.status = GenerateStatus.FAILED
+            song.save()
+            return JsonResponse({
+                "song_id": song.id,
+                "title":   song.title,
+                "status":  song.status,
+                "error":   str(e),
+            }, status=500)
+        
 
         except Exception as e:
             #Generation failed — mark Song as FAILED
