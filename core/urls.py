@@ -4,7 +4,7 @@ from .views.creator import CreatorListCreateView, CreatorDetailView
 from .views.listener import ListenerListCreateView, ListenerDetailView
 from .views.library import LibraryListView, LibraryDetailView
 from .views.song_form import SongFormListCreateView, SongFormDetailView
-from .views.song import SongListCreateView, SongDetailView
+from .views.song import SongListCreateView, SongDetailView, SongDescriptionView
 
 urlpatterns = [
     # Users
@@ -25,4 +25,5 @@ urlpatterns = [
     # Songs
     path("songs/",              SongListCreateView.as_view(),    name="song-list"),
     path("songs/<int:pk>/",     SongDetailView.as_view(),        name="song-detail"),
+    path("songs/<int:pk>/description/", SongDescriptionView.as_view(), name="song-description"),
 ]
