@@ -64,9 +64,6 @@ class SunoSongGeneratorStrategy(SongGeneratorStrategy):
             timeout=30,
         )
 
-        print("[Suno] Status code:", response.status_code)
-        print("[Suno] Raw response:", response.text)
-
         response.raise_for_status()
         data = response.json()
 
@@ -106,12 +103,24 @@ class SunoSongGeneratorStrategy(SongGeneratorStrategy):
             inner  = data.get("data") or {}
             status = inner.get("status", "")
 
-            print(f"[Suno] Attempt {attempt}/{self.MAX_ATTEMPTS} — status: {status}")
+
 
             if status == self.TERMINAL_SUCCESS:
-                # Only access response field once SUCCESS is confirmed
+                # Try all known response structures in priority order:
+                # 1. inner["response"]["sunoData"][0]  (documented shape)
                 suno_response = inner.get("response") or {}
-                suno_data     = suno_response.get("sunoData", [])
+                suno_data     = suno_response.get("sunoData") or []
+
+                # 2. inner["sunoData"][0]
+                if not suno_data:
+                    suno_data = inner.get("sunoData") or []
+
+                # 3. inner["data"] is a list  (older API shape)
+                if not suno_data:
+                    inner_data = inner.get("data")
+                    if isinstance(inner_data, list):
+                        suno_data = inner_data
+
                 if suno_data:
                     return suno_data[0]
 
@@ -130,14 +139,30 @@ class SunoSongGeneratorStrategy(SongGeneratorStrategy):
         Full generation flow: create task → poll → return result.
         """
         task_id = self._create_task(request)
-        print(f"[Suno] Task created: {task_id}")
-
         clip = self._poll_for_result(task_id)
 
+        # Official Suno API uses camelCase. Fallbacks for snake_case variants.
+        song_link = (
+            clip.get("audioUrl")            # ← confirmed field name
+            or clip.get("audio_url")
+            or clip.get("stream_audio_url")
+            or clip.get("streamAudioUrl")
+            or clip.get("mp3_url")
+            or clip.get("url")
+            or ""
+        )
+        cover_image = (
+            clip.get("imageUrl")            # ← confirmed field name
+            or clip.get("cover_image_url")
+            or clip.get("coverImageUrl")
+            or clip.get("image_url")
+            or ""
+        )
+
         return GenerationResult(
-            song_link   = clip.get("audio_url") or clip.get("stream_audio_url", ""),
+            song_link   = song_link,
             duration    = int(clip.get("duration", 0)),
             raw_status  = self.TERMINAL_SUCCESS,
             task_id     = task_id,
-            cover_image = clip.get("cover_image_url", ""),
+            cover_image = cover_image,
         )

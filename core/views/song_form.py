@@ -82,9 +82,6 @@ class SongFormListCreateView(View):
         )
 
         # Spawn background thread
-        # The thread polls Suno (up to ~10 min) and updates the Song row when
-        # done. The HTTP response is returned immediately so the user is never
-        # blocked and the server never times out.
         def _run_generation(song_id, creator_id, gen_req):
             """
             Background task: call the generation strategy and persist
@@ -95,8 +92,6 @@ class SongFormListCreateView(View):
             from django.db import connection as _conn
             try:
                 result = get_generator().generate(gen_req)
-
-                # Fix: persist ALL fields returned by the strategy,
                 # including cover_image which was previously dropped.
                 Song.objects.filter(pk=song_id).update(
                     song_link   = result.song_link or None,
@@ -128,7 +123,7 @@ class SongFormListCreateView(View):
             daemon=True,  # Won't block server shutdown
         ).start()
 
-        # ── Return 202 immediately ─────────────────────────────────────────────
+        # Return 202 immediately
         # Client should poll GET /api/songs/<id>/ and check `status`:
         #   "in_progress" → still generating
         #   "success"     → song_link and cover_image are now populated
