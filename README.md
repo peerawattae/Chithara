@@ -195,7 +195,7 @@ Expected success response (after ~2–3 minutes):
 ```
 Demonstration
 ![Chithara Preview](./assets/test_suno_strategy.png)
-![Chithara Preview](./assets/test_suno_strategy_2.png)
+![Chithara Preview](./assets/test_suno_strategy2.png)
 
 ---
 
