@@ -73,3 +73,40 @@ class SongDetailView(View):
             return not_found()
         s.delete()
         return JsonResponse({"deleted": True}, status=204)
+
+@method_decorator(csrf_exempt, name="dispatch")
+class SongDescriptionView(View):
+    """
+    GET /api/songs/<id>/description/
+    Returns full song details combined with its SongForm input data.
+    Covers FR17 (description page) and FR18 (show form details).
+    """
+    def get(self, request, pk):
+        try:
+            song = Song.objects.select_related("song_form").get(pk=pk)
+        except Song.DoesNotExist:
+            return not_found()
+
+        sf = song.song_form
+
+        return JsonResponse({
+            # Song output data
+            "song": {
+                "id":           song.id,
+                "title":        song.title,
+                "status":       song.status,
+                "song_link":    song.song_link,
+                "duration":     song.duration,
+                "cover_image":  song.cover_image,
+                "created_by":   song.created_by,
+                "created_at":   str(song.create_at),
+            },
+            # SongForm input data (FR18)
+            "form_details": {
+                "occasion":   sf.occasion   if sf else None,
+                "genre":      sf.genre      if sf else None,
+                "voice_type": sf.voice_type if sf else None,
+                "mood":       sf.mood       if sf else None,
+                "detail":     sf.detail     if sf else None,
+            } if sf else None,
+        })
