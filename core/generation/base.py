@@ -26,6 +26,7 @@ class GenerationResult:
     duration: int         # Duration in seconds
     raw_status: str       # Status string returned by the strategy (e.g. "SUCCESS")
     task_id: str = ""     # Optional: external task ID (used by Suno, empty for Mock)
+    cover_image: str = "" # Optional: cover image URL returned by the strategy
 
 
 class SongGeneratorStrategy(ABC):
