@@ -60,9 +60,6 @@ Follow these instructions to set up the project on your local machine.
    The application should now be running. You can view it in your browser at `http://127.0.0.1:8000/`.
 
 ---
-
-## Exercise 4 — Strategy Pattern (Song Generation)
-
 ### Overview
 
 Song generation uses the **Strategy Pattern** to allow swapping between a Mock strategy (offline, no API key needed) and the Suno API strategy (real AI generation) without changing any other code.
