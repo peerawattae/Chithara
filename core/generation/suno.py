@@ -91,28 +91,40 @@ class SunoSongGeneratorStrategy(SongGeneratorStrategy):
                 headers=self._headers(),
                 params={"taskId": task_id},
                 timeout=30,
-        )
-        response.raise_for_status()
-        data = response.json()
-        print(f"[Suno] Raw poll response: {data}")
-        status    = data.get("data", {}).get("status", "")
-        suno_data = data.get("data", {}).get("response", {}).get("sunoData", [])
+            )
+            response.raise_for_status()
+            data = response.json()
 
-        print(f"[Suno] Attempt {attempt}/{self.MAX_ATTEMPTS} — status: {status}")
+            code = data.get("code")
+            msg  = data.get("msg", "Unknown error")
 
-        if status == self.TERMINAL_SUCCESS and suno_data:
-            return suno_data[0]  # return first track
+            if code == 429:
+                raise RuntimeError(f"Suno credits insufficient — please top up your account: {msg}")
+            if code != 200:
+                raise RuntimeError(f"Suno API error (code {code}): {msg}")
 
-        if status == self.TERMINAL_FAIL:
-            raise RuntimeError(f"Suno generation failed for taskId: {task_id}")
+            inner  = data.get("data") or {}
+            status = inner.get("status", "")
 
-        time.sleep(self.POLL_INTERVAL)
+            print(f"[Suno] Attempt {attempt}/{self.MAX_ATTEMPTS} — status: {status}")
+
+            if status == self.TERMINAL_SUCCESS:
+                # Only access response field once SUCCESS is confirmed
+                suno_response = inner.get("response") or {}
+                suno_data     = suno_response.get("sunoData", [])
+                if suno_data:
+                    return suno_data[0]
+
+            if status == self.TERMINAL_FAIL:
+                raise RuntimeError(f"Suno generation failed for taskId: {task_id}")
+
+            time.sleep(self.POLL_INTERVAL)
 
         raise TimeoutError(
             f"Suno generation timed out after "
             f"{self.MAX_ATTEMPTS * self.POLL_INTERVAL}s for taskId: {task_id}"
         )
-
+        
     def generate(self, request: GenerationRequest) -> GenerationResult:
         """
         Full generation flow: create task → poll → return result.
