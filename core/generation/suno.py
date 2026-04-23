@@ -135,8 +135,9 @@ class SunoSongGeneratorStrategy(SongGeneratorStrategy):
         clip = self._poll_for_result(task_id)
 
         return GenerationResult(
-            song_link  = clip.get("audio_url") or clip.get("stream_audio_url", ""),
-            duration   = int(clip.get("duration", 0)),
-            raw_status = self.TERMINAL_SUCCESS,
-            task_id    = task_id,
+            song_link   = clip.get("audio_url") or clip.get("stream_audio_url", ""),
+            duration    = int(clip.get("duration", 0)),
+            raw_status  = self.TERMINAL_SUCCESS,
+            task_id     = task_id,
+            cover_image = clip.get("cover_image_url", ""),
         )

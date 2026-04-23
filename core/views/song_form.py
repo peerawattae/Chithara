@@ -1,3 +1,6 @@
+import threading
+
+from django.db import models
 from django.http import JsonResponse
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
@@ -21,15 +24,13 @@ class SongFormListCreateView(View):
 
     def post(self, request):
         d = parse_json(request)
- 
-        # Get or create Creator directly by user id
+
+        #Get or create Creator
         try:
             creator = Creator.objects.get(pk=d["user_id"])
             creator_created = False
         except Creator.DoesNotExist:
-            # Grab the existing user row data first
             user = User.objects.get(pk=d["user_id"])
-            # Use raw update to add the creator row without touching core_user
             from django.db import connection
             with connection.cursor() as cursor:
                 cursor.execute(
@@ -42,14 +43,14 @@ class SongFormListCreateView(View):
         if creator_created:
             Library.objects.create(owner=creator)
 
-        #Enforce daily quota
+        # Enforce daily quota
         if creator.quota <= 0:
             return JsonResponse(
                 {"error": "Daily generation limit reached (max 20 songs per day)"},
                 status=429,
             )
 
-        #Create SongForm
+        # Create SongForm
         sf = SongForm.objects.create(
             creator=creator,
             occasion=d["occasion"],
@@ -59,7 +60,7 @@ class SongFormListCreateView(View):
             detail=d.get("detail", ""),
         )
 
-        #Create Song with IN_PROGRESS status
+        # Create Song with IN_PROGRESS status immediately
         library = Library.objects.get(owner=creator)
         song = Song.objects.create(
             title=d["title"],
@@ -69,73 +70,75 @@ class SongFormListCreateView(View):
             song_form=sf,
         )
 
-        #Call the active generation strategy
-        try:
-            gen_request = GenerationRequest(
-                title=d["title"],
-                occasion=d["occasion"],
-                genre=d["genre"],
-                voice_type=d["voice_type"],
-                mood=d["mood"],
-                detail=d.get("detail", ""),
-            )
-            result = get_generator().generate(gen_request)
+        # Build the generation request before spawning the thread so that
+        # all data is captured from the current request context.
+        gen_request = GenerationRequest(
+            title=d["title"],
+            occasion=d["occasion"],
+            genre=d["genre"],
+            voice_type=d["voice_type"],
+            mood=d["mood"],
+            detail=d.get("detail", ""),
+        )
 
-            #Generation succeeded — update Song
-            song.song_link = result.song_link
-            song.duration  = result.duration
-            song.status    = GenerateStatus.SUCCESS
-            song.save()
+        # Spawn background thread
+        # The thread polls Suno (up to ~10 min) and updates the Song row when
+        # done. The HTTP response is returned immediately so the user is never
+        # blocked and the server never times out.
+        def _run_generation(song_id, creator_id, gen_req):
+            """
+            Background task: call the generation strategy and persist
+            the result (song_link, duration, cover_image, status) once
+            Suno responds. Quota is only deducted on success.
+            """
+            # Import inside the thread to ensure it uses its own DB connection.
+            from django.db import connection as _conn
+            try:
+                result = get_generator().generate(gen_req)
 
-            creator.quota -= 1
-            creator.save()
+                # Fix: persist ALL fields returned by the strategy,
+                # including cover_image which was previously dropped.
+                Song.objects.filter(pk=song_id).update(
+                    song_link   = result.song_link or None,
+                    duration    = result.duration,
+                    cover_image = result.cover_image or None,
+                    status      = GenerateStatus.SUCCESS,
+                )
 
-            return JsonResponse({
-                "song_id":   song.id,
-                "title":     song.title,
-                "status":    song.status,
-                "song_link": song.song_link,
-                "duration":  song.duration,
-                "task_id":   result.task_id,
-            }, status=201)
+                # Use F() to avoid race conditions on the quota counter.
+                Creator.objects.filter(pk=creator_id).update(
+                    quota=models.F("quota") - 1
+                )
+                print(f"[Generation] Song {song_id} succeeded — {result.song_link}")
 
-        except RuntimeError as e:
-            song.status = GenerateStatus.FAILED
-            song.save()
+            except Exception as exc:
+                Song.objects.filter(pk=song_id).update(
+                    status=GenerateStatus.FAILED,
+                )
+                print(f"[Generation] Song {song_id} FAILED — {exc}")
 
-            # Detect credit error specifically
-            error_msg = str(e)
-            status_code = 402 if "credits insufficient" in error_msg else 500
-            return JsonResponse({
-                "song_id": song.id,
-                "title":   song.title,
-                "status":  song.status,
-                "error":   error_msg,
-            }, status=status_code)
+            finally:
+                # Always close the thread-local DB connection so it is
+                # returned to the pool and does not leak.
+                _conn.close()
 
-        except Exception as e:
-            song.status = GenerateStatus.FAILED
-            song.save()
-            return JsonResponse({
-                "song_id": song.id,
-                "title":   song.title,
-                "status":  song.status,
-                "error":   str(e),
-            }, status=500)
-        
+        threading.Thread(
+            target=_run_generation,
+            args=(song.id, creator.id, gen_request),
+            daemon=True,  # Won't block server shutdown
+        ).start()
 
-        except Exception as e:
-            #Generation failed — mark Song as FAILED
-            # Quota is NOT deducted on failure (BR2)
-            song.status = GenerateStatus.FAILED
-            song.save()
-
-            return JsonResponse({
-                "song_id": song.id,
-                "title":   song.title,
-                "status":  song.status,
-                "error":   str(e),
-            }, status=500)
+        # ── Return 202 immediately ─────────────────────────────────────────────
+        # Client should poll GET /api/songs/<id>/ and check `status`:
+        #   "in_progress" → still generating
+        #   "success"     → song_link and cover_image are now populated
+        #   "failed"      → generation failed
+        return JsonResponse({
+            "song_id": song.id,
+            "title":   song.title,
+            "status":  song.status,  # "in_progress"
+            "message": "Generation started. Poll GET /api/songs/<id>/ for updates.",
+        }, status=202)
 
 
 @method_decorator(csrf_exempt, name="dispatch")
