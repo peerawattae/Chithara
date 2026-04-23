@@ -133,7 +133,7 @@ Demonstration
 
 ### How to run in Suno mode
 
-Requires a valid `SUNO_API_KEY`. Generation takes 2–3 minutes while the server polls for completion.
+Requires a valid `SUNO_API_KEY`. Generation runs in a **background thread** — the API returns `202 Accepted` immediately so the user is never blocked.
 
 ```bash
 # Option A — set in .env
@@ -144,29 +144,58 @@ SUNO_API_KEY=your_key_here
 GENERATOR_STRATEGY=suno SUNO_API_KEY=your_key python manage.py runserver
 ```
 
-Send the same Postman request as above. You will see polling logs in the terminal:
-```
-[Suno] Task created: 35d98d3a77345d036ea088b53af4eee0
-[Suno] Attempt 1/40 — status: PENDING
-[Suno] Attempt 2/40 — status: PENDING
-[Suno] Attempt 3/40 — status: TEXT_SUCCESS
-[Suno] Attempt 9/40 — status: FIRST_SUCCESS
-[Suno] Attempt 12/40 — status: SUCCESS
+**Step 1 — Submit the generation request:**
+```bash
+curl -X POST http://127.0.0.1:8000/api/song-forms/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_id": 1,
+    "title": "Morning Vibes",
+    "occasion": "casual",
+    "genre": "pop",
+    "voice_type": "male",
+    "mood": "light and calm",
+    "detail": "soft acoustic guitar"
+  }'
 ```
 
-Expected response (after ~2–3 minutes):
+The server responds **instantly** with `HTTP 202`:
 ```json
 {
   "song_id": 2,
   "title": "Morning Vibes",
+  "status": "in_progress",
+  "message": "Generation started. Poll GET /api/songs/<id>/ for updates."
+}
+```
+
+**Step 2 — Poll for the result:**
+```bash
+curl http://127.0.0.1:8000/api/songs/2/
+```
+
+Keep polling every 15–30 seconds. You will see the status progress through:
+- `in_progress` — Suno is still generating
+- `success` — song is ready, `song_link` and `cover_image` are populated
+- `failed` — generation failed (quota, API error, etc.)
+
+Expected success response (after ~2–3 minutes):
+```json
+{
+  "id": 2,
+  "title": "Morning Vibes",
   "status": "success",
-  "song_link": "https://musicfile.removeai.ai/...",
-  "duration": 180,
-  "task_id": "35d98d3a77345d036ea088b53af4eee0"
+  "song_link": "https://tempfile.aiquickdraw.com/r/....mp3",
+  "cover_image": "https://musicfile.removeai.ai/....jpeg",
+  "duration": 211,
+  "created_by": "Peerawat",
+  "create_at": "2026-04-23 15:49:38+00:00",
+  "library_id": 1
 }
 ```
 Demonstration
 ![Chithara Preview](./assets/test_suno_strategy.png)
+![Chithara Preview](./assets/test_suno_strategy_2.png)
 
 ---
 
