@@ -1,23 +1,21 @@
 {% extends "core/base.html" %}
-
 {% block title %}Create Song — Chitra{% endblock %}
 
 {% block extra_styles %}
 <style>
     .create-layout {
         display: grid;
-        grid-template-columns: 1fr 380px;
+        grid-template-columns: 1fr 360px;
         gap: 2rem;
         align-items: start;
     }
 
-    @media (max-width: 860px) {
+    @media(max-width:860px) {
         .create-layout {
             grid-template-columns: 1fr;
         }
     }
 
-    /* ── Form card ── */
     .form-card {
         background: var(--surface);
         border: 1px solid var(--border);
@@ -42,22 +40,15 @@
         margin-bottom: 2rem;
     }
 
-    /* ── Form fields ── */
-    .field-group {
-        display: flex;
-        flex-direction: column;
-        gap: 1.2rem;
-        margin-bottom: 1.5rem;
-    }
-
     .field {
         display: flex;
         flex-direction: column;
         gap: 0.4rem;
+        margin-bottom: 1.2rem;
     }
 
     .field label {
-        font-size: 0.8rem;
+        font-size: 0.78rem;
         font-weight: 500;
         letter-spacing: 0.08em;
         text-transform: uppercase;
@@ -66,7 +57,6 @@
 
     .field label span {
         color: var(--accent);
-        margin-left: 2px;
     }
 
     .field input,
@@ -104,11 +94,10 @@
         gap: 1rem;
     }
 
-    /* ── Step indicator ── */
+    /* Steps */
     .steps {
         display: flex;
         align-items: center;
-        gap: 0;
         margin-bottom: 2rem;
     }
 
@@ -124,10 +113,6 @@
         color: var(--accent);
     }
 
-    .step.done {
-        color: var(--success);
-    }
-
     .step-num {
         width: 26px;
         height: 26px;
@@ -140,13 +125,13 @@
         font-weight: 500;
     }
 
-    .step-active .step-num {
+    .step.active .step-num {
         background: var(--accent);
         color: #0a0a0f;
         border-color: var(--accent);
     }
 
-    .step-done .step-num {
+    .step.done .step-num {
         background: var(--success);
         color: #fff;
         border-color: var(--success);
@@ -159,7 +144,7 @@
         margin: 0 0.5rem;
     }
 
-    /* ── Review panel ── */
+    /* Review panel */
     .review-panel {
         background: var(--surface);
         border: 1px solid var(--border);
@@ -179,9 +164,6 @@
     }
 
     .review-item {
-        display: flex;
-        flex-direction: column;
-        gap: 0.15rem;
         margin-bottom: 1rem;
     }
 
@@ -195,6 +177,7 @@
     .review-value {
         font-size: 0.9rem;
         color: var(--text);
+        margin-top: 0.15rem;
     }
 
     .review-empty {
@@ -203,7 +186,6 @@
         font-size: 0.85rem;
     }
 
-    /* ── Submit area ── */
     .submit-area {
         margin-top: 1.5rem;
         padding-top: 1.5rem;
@@ -234,12 +216,12 @@
         transition: width 0.3s;
     }
 
-    /* ── Generating overlay ── */
-    .generating-overlay {
+    /* Generating overlay */
+    .gen-overlay {
         display: none;
         position: fixed;
         inset: 0;
-        background: rgba(10, 10, 15, 0.85);
+        background: rgba(10, 10, 15, 0.88);
         z-index: 999;
         align-items: center;
         justify-content: center;
@@ -247,17 +229,17 @@
         gap: 1.5rem;
     }
 
-    .generating-overlay.active {
+    .gen-overlay.active {
         display: flex;
     }
 
-    .generating-overlay h3 {
+    .gen-overlay h3 {
         font-family: 'Playfair Display', serif;
         font-size: 1.5rem;
         color: var(--accent);
     }
 
-    .generating-overlay p {
+    .gen-overlay p {
         color: var(--muted);
         font-size: 0.875rem;
     }
@@ -274,247 +256,142 @@
 {% endblock %}
 
 {% block content %}
-<div style="margin-bottom:2rem;">
-    <!-- Step indicator -->
-    <div class="steps">
-        <div class="step" id="step1-indicator">
-            <div class="step-num">1</div>
-            <span>Fill Form</span>
-        </div>
-        <div class="step-line"></div>
-        <div class="step" id="step2-indicator">
-            <div class="step-num">2</div>
-            <span>Review</span>
-        </div>
-        <div class="step-line"></div>
-        <div class="step" id="step3-indicator">
-            <div class="step-num">3</div>
-            <span>Generate</span>
-        </div>
+<div class="steps">
+    <div class="step active" id="si1">
+        <div class="step-num">1</div><span>Fill Form</span>
+    </div>
+    <div class="step-line"></div>
+    <div class="step" id="si2">
+        <div class="step-num">2</div><span>Review</span>
+    </div>
+    <div class="step-line"></div>
+    <div class="step" id="si3">
+        <div class="step-num">3</div><span>Generate</span>
     </div>
 </div>
 
 <div class="create-layout">
-    <!-- Left: Form -->
     <div class="form-card">
         <h2>Create a <span>New Song</span></h2>
-        <p class="form-subtitle">Fill in the details and let AI compose your song.</p>
+        <p class="form-subtitle">Fill in the details below and let AI compose your song.</p>
 
-        <div class="field-group">
+        <div class="field">
+            <label>Title <span>*</span></label>
+            <input type="text" id="f-title" placeholder="e.g. Morning Vibes" oninput="sync()" />
+        </div>
+
+        <div class="field-row">
             <div class="field">
-                <label>Title <span>*</span></label>
-                <input type="text" id="f-title" placeholder="e.g. Morning Vibes" oninput="updateReview()" />
+                <label>Genre <span>*</span></label>
+                <select id="f-genre" onchange="sync()">
+                    <option value="">Select…</option>
+                    <option value="pop">Pop</option>
+                    <option value="hiphop">Hip-Hop</option>
+                    <option value="rock">Rock</option>
+                    <option value="reggae">Reggae</option>
+                    <option value="country">Country</option>
+                    <option value="rnb">R&B</option>
+                    <option value="edm">EDM</option>
+                </select>
             </div>
-
-            <div class="field-row">
-                <div class="field">
-                    <label>Genre <span>*</span></label>
-                    <select id="f-genre" onchange="updateReview()">
-                        <option value="">Select genre</option>
-                        <option value="pop">Pop</option>
-                        <option value="hiphop">Hip-Hop</option>
-                        <option value="rock">Rock</option>
-                        <option value="reggae">Reggae</option>
-                        <option value="country">Country</option>
-                        <option value="rnb">R&B</option>
-                        <option value="edm">EDM</option>
-                    </select>
-                </div>
-                <div class="field">
-                    <label>Voice Type <span>*</span></label>
-                    <input type="text" id="f-voice" placeholder="e.g. female, male" oninput="updateReview()" />
-                </div>
-            </div>
-
             <div class="field">
-                <label>Occasion <span>*</span></label>
-                <input type="text" id="f-occasion" placeholder="e.g. birthday, casual, wedding"
-                    oninput="updateReview()" />
-            </div>
-
-            <div class="field">
-                <label>Mood <span>*</span></label>
-                <input type="text" id="f-mood" placeholder="e.g. light mood like sipping tea on a cold morning"
-                    oninput="updateReview()" />
-            </div>
-
-            <div class="field">
-                <label>Additional Details</label>
-                <textarea id="f-detail" placeholder="e.g. soft acoustic guitar, no drums..."
-                    oninput="updateReview()"></textarea>
-            </div>
-
-            <div class="field">
-                <label>User ID <span>*</span></label>
-                <input type="number" id="f-userid" value="1" min="1" oninput="updateReview()" />
+                <label>Voice Type <span>*</span></label>
+                <input type="text" id="f-voice" placeholder="e.g. female" oninput="sync()" />
             </div>
         </div>
 
-        <div style="display:flex;gap:0.8rem;">
+        <div class="field">
+            <label>Occasion <span>*</span></label>
+            <input type="text" id="f-occasion" placeholder="e.g. birthday, casual" oninput="sync()" />
+        </div>
+
+        <div class="field">
+            <label>Mood <span>*</span></label>
+            <input type="text" id="f-mood" placeholder="e.g. light mood like sipping tea on a cold morning"
+                oninput="sync()" />
+        </div>
+
+        <div class="field">
+            <label>Additional Details</label>
+            <textarea id="f-detail" placeholder="e.g. soft acoustic guitar, no drums…" oninput="sync()"></textarea>
+        </div>
+
+        <div style="display:flex;gap:0.8rem;margin-top:0.5rem;">
             <button class="btn btn-ghost" onclick="clearForm()" style="flex:1">Clear</button>
             <button class="btn btn-primary" onclick="reviewForm()" style="flex:2">Review →</button>
         </div>
     </div>
 
-    <!-- Right: Review panel -->
+    <!-- Review panel -->
     <div class="review-panel">
         <h3>Review Your Song</h3>
-
         <div class="review-item">
-            <span class="review-label">Title</span>
-            <span class="review-value" id="rv-title"><span class="review-empty">Not set</span></span>
+            <div class="review-label">Title</div>
+            <div class="review-value" id="rv-title"><span class="review-empty">Not set</span></div>
         </div>
         <div class="review-item">
-            <span class="review-label">Genre</span>
-            <span class="review-value" id="rv-genre"><span class="review-empty">Not set</span></span>
+            <div class="review-label">Genre</div>
+            <div class="review-value" id="rv-genre"><span class="review-empty">Not set</span></div>
         </div>
         <div class="review-item">
-            <span class="review-label">Voice Type</span>
-            <span class="review-value" id="rv-voice"><span class="review-empty">Not set</span></span>
+            <div class="review-label">Voice Type</div>
+            <div class="review-value" id="rv-voice"><span class="review-empty">Not set</span></div>
         </div>
         <div class="review-item">
-            <span class="review-label">Occasion</span>
-            <span class="review-value" id="rv-occasion"><span class="review-empty">Not set</span></span>
+            <div class="review-label">Occasion</div>
+            <div class="review-value" id="rv-occasion"><span class="review-empty">Not set</span></div>
         </div>
         <div class="review-item">
-            <span class="review-label">Mood</span>
-            <span class="review-value" id="rv-mood"><span class="review-empty">Not set</span></span>
+            <div class="review-label">Mood</div>
+            <div class="review-value" id="rv-mood"><span class="review-empty">Not set</span></div>
         </div>
         <div class="review-item">
-            <span class="review-label">Details</span>
-            <span class="review-value" id="rv-detail"><span class="review-empty">None</span></span>
+            <div class="review-label">Details</div>
+            <div class="review-value" id="rv-detail"><span class="review-empty">None</span></div>
         </div>
 
         <div class="submit-area">
             <div class="quota-bar">
-                <div class="quota-fill" id="quota-fill" style="width:0%"></div>
+                <div class="quota-fill" id="qfill" style="width:0%"></div>
             </div>
-            <div class="quota-info" id="quota-info">Loading quota…</div>
-            <button class="btn btn-primary" id="generate-btn" onclick="generateSong()" disabled
-                style="width:100%;justify-content:center;">
-                ✦ Generate Song
-            </button>
+            <div class="quota-info" id="qinfo">Loading quota…</div>
+            <button class="btn btn-primary" id="gen-btn" onclick="generate()" disabled
+                style="width:100%;justify-content:center;">✦ Generate Song</button>
         </div>
     </div>
 </div>
 
-<!-- Generating overlay (FR7: reactive feedback) -->
-<div class="generating-overlay" id="gen-overlay">
+<!-- Generating overlay (FR7) -->
+<div class="gen-overlay" id="gen-overlay">
     <div class="big-spinner"></div>
     <h3>Composing your song…</h3>
-    <p>AI is generating your music. This may take 2–3 minutes.</p>
-    <p id="gen-status" style="color:var(--accent);font-size:0.8rem;"></p>
+    <p>Sit back — AI is generating your music.</p>
+    <p id="gen-status" style="color:var(--accent);font-size:0.8rem;margin-top:0.5rem;"></p>
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
     const API = '/api';
+    const DOMAIN_UID = {{ user.id|default:"null" }};
 
-    // ── Update live review panel ──────────────────────────────────
-    function updateReview() {
-        const set = (id, val) => {
-            const el = document.getElementById(id);
-            el.innerHTML = val
-                ? `<span>${val}</span>`
-                : `<span class="review-empty">Not set</span>`;
-        };
-
-        set('rv-title', document.getElementById('f-title').value);
-        set('rv-genre', document.getElementById('f-genre').value);
-        set('rv-voice', document.getElementById('f-voice').value);
-        set('rv-occasion', document.getElementById('f-occasion').value);
-        set('rv-mood', document.getElementById('f-mood').value);
-        set('rv-detail', document.getElementById('f-detail').value || null);
-
-        checkFormReady();
+    function rv(id, val) {
+        document.getElementById(id).innerHTML = val
+            ? val : `<span class="review-empty">Not set</span>`;
     }
 
-    // ── Validate form ─────────────────────────────────────────────
-    function checkFormReady() {
-        const required = ['f-title', 'f-genre', 'f-voice', 'f-occasion', 'f-mood'];
-        const allFilled = required.every(id => document.getElementById(id).value.trim());
-        document.getElementById('generate-btn').disabled = !allFilled;
+    function sync() {
+        rv('rv-title', document.getElementById('f-title').value);
+        rv('rv-genre', document.getElementById('f-genre').value);
+        rv('rv-voice', document.getElementById('f-voice').value);
+        rv('rv-occasion', document.getElementById('f-occasion').value);
+        rv('rv-mood', document.getElementById('f-mood').value);
+        const det = document.getElementById('f-detail').value;
+        document.getElementById('rv-detail').innerHTML =
+            det ? det : `<span class="review-empty">None</span>`;
     }
 
-    // ── Review step (FR2: final review before generation) ─────────
-    async function reviewForm() {
-        const payload = getPayload();
-        const missing = ['title', 'genre', 'voice_type', 'occasion', 'mood']
-            .filter(f => !payload[f]);
-
-        if (missing.length) {
-            showToast(`Please fill in: ${missing.join(', ')}`, 'error');
-            return;
-        }
-
-        try {
-            const res = await fetch(`${API}/song-forms/review/`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-            });
-            const data = await res.json();
-
-            // Update review panel with confirmed data
-            const r = data.review;
-            document.getElementById('rv-title').innerHTML = `<strong>${r.title}</strong>`;
-            document.getElementById('rv-genre').textContent = r.genre;
-            document.getElementById('rv-voice').textContent = r.voice_type;
-            document.getElementById('rv-occasion').textContent = r.occasion;
-            document.getElementById('rv-mood').textContent = r.mood;
-            document.getElementById('rv-detail').textContent = r.detail || '—';
-
-            showToast('Review confirmed — ready to generate!', 'success');
-            document.getElementById('generate-btn').disabled = false;
-
-            // Update step indicators
-            markStepDone('step1-indicator');
-            markStepActive('step2-indicator');
-
-        } catch (err) {
-            showToast('Review failed: ' + err.message, 'error');
-        }
-    }
-
-    // ── Generate song ─────────────────────────────────────────────
-    async function generateSong() {
-        const payload = getPayload();
-        payload.user_id = parseInt(document.getElementById('f-userid').value);
-
-        // Show generating overlay (FR7)
-        document.getElementById('gen-overlay').classList.add('active');
-        document.getElementById('gen-status').textContent = 'Sending request…';
-        markStepActive('step3-indicator');
-
-        try {
-            const res = await fetch(`${API}/song-forms/`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-            });
-            const data = await res.json();
-
-            document.getElementById('gen-overlay').classList.remove('active');
-
-            if (data.status === 'success') {
-                showToast('Song created successfully! 🎵', 'success');
-                markStepDone('step3-indicator');
-                setTimeout(() => {
-                    window.location.href = `/songs/${data.song_id}/`;
-                }, 1200);
-            } else {
-                showToast(`Generation failed: ${data.error}`, 'error');
-            }
-
-        } catch (err) {
-            document.getElementById('gen-overlay').classList.remove('active');
-            showToast('Error: ' + err.message, 'error');
-        }
-    }
-
-    // ── Helpers ───────────────────────────────────────────────────
-    function getPayload() {
+    function payload() {
         return {
             title: document.getElementById('f-title').value.trim(),
             genre: document.getElementById('f-genre').value,
@@ -525,44 +402,77 @@
         };
     }
 
-    function clearForm() {
-        ['f-title', 'f-voice', 'f-occasion', 'f-mood', 'f-detail'].forEach(id => {
-            document.getElementById(id).value = '';
-        });
-        document.getElementById('f-genre').value = '';
-        updateReview();
-    }
+    // FR2: review before generate
+    async function reviewForm() {
+        const p = payload();
+        const missing = ['title', 'genre', 'voice_type', 'occasion', 'mood'].filter(f => !p[f]);
+        if (missing.length) { showToast(`Fill in: ${missing.join(', ')}`, 'error'); return; }
 
-    function markStepDone(id) {
-        const el = document.getElementById(id);
-        el.classList.remove('active');
-        el.classList.add('done');
-        el.querySelector('.step-num').textContent = '✓';
-    }
-
-    function markStepActive(id) {
-        document.getElementById(id).classList.add('active');
-    }
-
-    // ── Load quota ────────────────────────────────────────────────
-    async function loadQuota() {
         try {
-            const uid = parseInt(document.getElementById('f-userid').value) || 1;
+            const res = await fetch(`${API}/song-forms/review/`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(p),
+            });
+            await res.json();
+            showToast('Looks good — ready to generate!', 'success');
+            document.getElementById('gen-btn').disabled = false;
+            // Step indicator
+            const s1 = document.getElementById('si1');
+            s1.classList.remove('active'); s1.classList.add('done');
+            s1.querySelector('.step-num').textContent = '✓';
+            document.getElementById('si2').classList.add('active');
+        } catch (e) { showToast('Review failed: ' + e.message, 'error'); }
+    }
+
+    // Generate
+    async function generate() {
+        if (!DOMAIN_UID) { showToast('Not logged in', 'error'); return; }
+        const p = { ...payload(), user_id: DOMAIN_UID };
+
+        document.getElementById('gen-overlay').classList.add('active');
+        document.getElementById('si3').classList.add('active');
+
+        try {
+            const res = await fetch(`${API}/song-forms/`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(p),
+            });
+            const data = await res.json();
+            document.getElementById('gen-overlay').classList.remove('active');
+
+            // Background generation — redirect to library to see progress
+            showToast('Song queued! Generating in background 🎵', 'success');
+            setTimeout(() => { window.location.href = '/library/'; }, 1500);
+
+        } catch (e) {
+            document.getElementById('gen-overlay').classList.remove('active');
+            showToast('Error: ' + e.message, 'error');
+        }
+    }
+
+    function clearForm() {
+        ['f-title', 'f-voice', 'f-occasion', 'f-mood', 'f-detail'].forEach(id =>
+            document.getElementById(id).value = '');
+        document.getElementById('f-genre').value = '';
+        document.getElementById('gen-btn').disabled = true;
+        sync();
+    }
+
+    async function loadQuota() {
+        if (!DOMAIN_UID) return;
+        try {
             const res = await fetch(`${API}/creators/`);
             const list = await res.json();
-            const c = list.find(x => x.id === uid);
+            const c = list.find(x => x.id === DOMAIN_UID);
             if (c) {
                 const used = 20 - (c.quota || 0);
-                const pct = (used / 20) * 100;
-                document.getElementById('quota-fill').style.width = pct + '%';
-                document.getElementById('quota-info').textContent =
-                    `${c.quota} / 20 generations remaining today`;
+                document.getElementById('qfill').style.width = (used / 20 * 100) + '%';
+                document.getElementById('qinfo').textContent = `${c.quota} / 20 generations remaining today`;
             }
-        } catch { /* quota display is optional */ }
+        } catch { document.getElementById('qinfo').textContent = ''; }
     }
 
-    // ── Init ──────────────────────────────────────────────────────
-    updateReview();
+    sync();
     loadQuota();
 </script>
 {% endblock %}

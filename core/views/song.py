@@ -13,7 +13,7 @@ class SongListCreateView(View):
         return JsonResponse(
             list(Song.objects.values(
                 "id", "title", "status", "song_link",
-                "created_by", "duration", "create_at", "cover_image", "library_id",
+                "created_by", "duration", "create_at", "cover_image", "library_id", "error_message"
             )),
             safe=False,
         )
@@ -52,6 +52,7 @@ class SongDetailView(View):
             "song_link": s.song_link, "created_by": s.created_by,
             "duration": s.duration, "create_at": str(s.create_at),
             "cover_image": s.cover_image, "library_id": s.library_id,
+            "error_message": s.error_message,
         })
 
     def put(self, request, pk):
@@ -100,6 +101,7 @@ class SongDescriptionView(View):
                 "cover_image":  song.cover_image,
                 "created_by":   song.created_by,
                 "created_at":   str(song.create_at),
+                "error_message":song.error_message,
             },
             # SongForm input data (FR18)
             "form_details": {

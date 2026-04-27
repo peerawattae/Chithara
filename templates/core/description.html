@@ -1,23 +1,21 @@
 {% extends "core/base.html" %}
-
-{% block title %}Song Description — Chitra{% endblock %}
+{% block title %}Description — Chitra{% endblock %}
 
 {% block extra_styles %}
 <style>
     .desc-layout {
         display: grid;
-        grid-template-columns: 280px 1fr;
+        grid-template-columns: 260px 1fr;
         gap: 2.5rem;
         align-items: start;
     }
 
-    @media (max-width: 760px) {
+    @media(max-width:760px) {
         .desc-layout {
             grid-template-columns: 1fr;
         }
     }
 
-    /* ── Side cover ── */
     .desc-cover {
         aspect-ratio: 1;
         border-radius: var(--radius);
@@ -41,7 +39,7 @@
         opacity: 1;
     }
 
-    .play-from-desc {
+    .play-fab {
         position: absolute;
         bottom: 1rem;
         right: 1rem;
@@ -59,11 +57,10 @@
         transition: transform 0.15s;
     }
 
-    .play-from-desc:hover {
+    .play-fab:hover {
         transform: scale(1.1);
     }
 
-    /* ── Right panel ── */
     .desc-content {
         display: flex;
         flex-direction: column;
@@ -72,7 +69,7 @@
 
     .desc-title {
         font-family: 'Playfair Display', serif;
-        font-size: 2.2rem;
+        font-size: 2rem;
         font-weight: 400;
     }
 
@@ -82,18 +79,17 @@
         margin-top: 0.3rem;
     }
 
-    /* ── Info cards ── */
-    .info-section {
+    .info-card {
         background: var(--surface);
         border: 1px solid var(--border);
         border-radius: var(--radius);
         overflow: hidden;
     }
 
-    .info-section-header {
-        padding: 1rem 1.5rem;
+    .info-header {
+        padding: 0.9rem 1.5rem;
         border-bottom: 1px solid var(--border);
-        font-size: 0.75rem;
+        font-size: 0.72rem;
         text-transform: uppercase;
         letter-spacing: 0.1em;
         color: var(--accent);
@@ -103,11 +99,10 @@
     .info-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 0;
     }
 
     .info-cell {
-        padding: 1.1rem 1.5rem;
+        padding: 1rem 1.5rem;
         border-bottom: 1px solid var(--border);
         border-right: 1px solid var(--border);
     }
@@ -121,13 +116,13 @@
         border-bottom: none;
     }
 
-    .info-cell-full {
-        padding: 1.1rem 1.5rem;
+    .info-full {
+        padding: 1rem 1.5rem;
         border-bottom: 1px solid var(--border);
-        grid-column: 1 / -1;
+        grid-column: 1/-1;
     }
 
-    .info-cell-full:last-child {
+    .info-full:last-child {
         border-bottom: none;
     }
 
@@ -145,18 +140,10 @@
         line-height: 1.5;
     }
 
-    /* ── Action row ── */
     .desc-actions {
         display: flex;
         gap: 0.8rem;
         flex-wrap: wrap;
-    }
-
-    /* ── Status display ── */
-    .status-row {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
     }
 </style>
 {% endblock %}
@@ -167,48 +154,43 @@
     <a href="/songs/{{ song_id }}/" class="btn btn-ghost" style="font-size:0.8rem;">▶ Player</a>
 </div>
 
-<!-- Loading -->
-<div id="loading-state" style="text-align:center;padding:5rem;">
+<div id="loading" style="text-align:center;padding:5rem;">
     <div class="spinner" style="width:40px;height:40px;margin:0 auto 1rem;"></div>
-    <p style="color:var(--muted);">Loading description…</p>
+    <p style="color:var(--muted);">Loading…</p>
 </div>
 
-<!-- Content -->
-<div class="desc-layout" id="desc-layout" style="display:none;">
-    <!-- Cover -->
+<div class="desc-layout" id="layout" style="display:none;">
     <div>
         <div class="desc-cover" id="desc-cover">
             <span>♪</span>
-            <a href="/songs/{{ song_id }}/" class="play-from-desc" title="Play song">▶</a>
+            <a href="/songs/{{ song_id }}/" class="play-fab">▶</a>
         </div>
     </div>
 
-    <!-- Description content -->
     <div class="desc-content">
-        <!-- Title + status -->
         <div>
-            <h1 class="desc-title" id="desc-title">—</h1>
-            <div class="desc-creator" id="desc-creator"></div>
-            <div class="status-row" style="margin-top:0.8rem;">
-                <span id="desc-status-badge"></span>
-                <span style="color:var(--muted);font-size:0.8rem;" id="desc-date"></span>
+            <h1 class="desc-title" id="d-title">—</h1>
+            <div class="desc-creator" id="d-creator"></div>
+            <div style="margin-top:0.8rem;display:flex;align-items:center;gap:1rem;">
+                <span id="d-badge"></span>
+                <span style="color:var(--muted);font-size:0.8rem;" id="d-date"></span>
             </div>
         </div>
 
-        <!-- Song output details -->
-        <div class="info-section">
-            <div class="info-section-header">Song Details</div>
+        <!-- Song output -->
+        <div class="info-card">
+            <div class="info-header">Song Details</div>
             <div class="info-grid">
                 <div class="info-cell">
                     <div class="cell-label">Duration</div>
-                    <div class="cell-value" id="d-duration">—</div>
+                    <div class="cell-value" id="d-dur">—</div>
                 </div>
                 <div class="info-cell">
                     <div class="cell-label">Status</div>
                     <div class="cell-value" id="d-status">—</div>
                 </div>
-                <div class="info-cell-full">
-                    <div class="cell-label">Audio Link</div>
+                <div class="info-full">
+                    <div class="cell-label">Audio</div>
                     <div class="cell-value">
                         <a id="d-link" href="#" target="_blank"
                             style="color:var(--accent);word-break:break-all;font-size:0.8rem;">—</a>
@@ -217,9 +199,9 @@
             </div>
         </div>
 
-        <!-- Form input details (FR18) -->
-        <div class="info-section">
-            <div class="info-section-header">Generation Parameters (FR18)</div>
+        <!-- Form details FR18 -->
+        <div class="info-card">
+            <div class="info-header">Generation Parameters</div>
             <div class="info-grid">
                 <div class="info-cell">
                     <div class="cell-label">Genre</div>
@@ -237,18 +219,17 @@
                     <div class="cell-label">Mood</div>
                     <div class="cell-value" id="d-mood">—</div>
                 </div>
-                <div class="info-cell-full">
-                    <div class="cell-label">Additional Details</div>
+                <div class="info-full">
+                    <div class="cell-label">Details</div>
                     <div class="cell-value" id="d-detail">—</div>
                 </div>
             </div>
         </div>
 
-        <!-- Actions -->
         <div class="desc-actions">
-            <button class="btn btn-primary" onclick="playSong()">▶ Play Song</button>
-            <button class="btn btn-ghost" onclick="shareSong()">↗ Share</button>
-            <button class="btn btn-ghost" onclick="downloadSong()">↓ Download</button>
+            <a href="/songs/{{ song_id }}/" class="btn btn-primary">▶ Play Song</a>
+            <button class="btn btn-ghost" onclick="share()">↗ Share</button>
+            <button class="btn btn-ghost" onclick="dl()">↓ Download</button>
         </div>
     </div>
 </div>
@@ -258,8 +239,8 @@
     <div class="modal">
         <h3>Share Song</h3>
         <div class="share-link-box">
-            <input type="text" id="share-link-input" readonly />
-            <button class="btn btn-primary" onclick="copyShareLink()">Copy</button>
+            <input type="text" id="share-input" readonly />
+            <button class="btn btn-primary" onclick="copyLink()">Copy</button>
         </div>
         <div style="margin-top:1.5rem;text-align:right;">
             <button class="btn btn-ghost" onclick="closeModal()">Close</button>
@@ -273,43 +254,38 @@
     const API = '/api';
     const SONG_ID = {{ song_id }};
 
-    function fmtTime(s) {
+    function fmt(s) {
         if (!s) return '—';
-        const m = Math.floor(s / 60);
-        const sec = s % 60;
-        return `${m}:${sec.toString().padStart(2, '0')}`;
+        return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
     }
 
-    // ── Load description ──────────────────────────────────────────
-    async function loadDescription() {
+    async function load() {
         try {
             const res = await fetch(`${API}/songs/${SONG_ID}/description/`);
             const data = await res.json();
             const s = data.song;
             const f = data.form_details;
 
-            // Header
-            document.getElementById('desc-title').textContent = s.title;
-            document.getElementById('desc-creator').textContent = `by ${s.created_by}`;
-            document.getElementById('desc-status-badge').innerHTML = statusBadge(s.status);
-            document.getElementById('desc-date').textContent = `Created ${new Date(s.created_at).toLocaleDateString()}`;
+            document.getElementById('d-title').textContent = s.title;
+            document.getElementById('d-creator').textContent = `by ${s.created_by}`;
+            document.getElementById('d-badge').innerHTML = statusBadge(s.status);
+            document.getElementById('d-date').textContent = `Created ${new Date(s.created_at).toLocaleDateString()}`;
 
-            // Cover
             if (s.cover_image) {
-                const cover = document.getElementById('desc-cover');
-                cover.innerHTML = `
-          <img src="${s.cover_image}" alt="${s.title}">
-          <a href="/songs/${SONG_ID}/" class="play-from-desc">▶</a>`;
+                document.getElementById('desc-cover').innerHTML =
+                    `<img src="${s.cover_image}" alt="${s.title}">
+           <a href="/songs/${SONG_ID}/" class="play-fab">▶</a>`;
             }
 
-            // Song details
-            document.getElementById('d-duration').textContent = fmtTime(s.duration);
+            document.getElementById('d-dur').textContent = fmt(s.duration);
             document.getElementById('d-status').innerHTML = statusBadge(s.status);
-            const link = document.getElementById('d-link');
-            link.href = s.song_link || '#';
-            link.textContent = s.song_link ? 'Open audio file ↗' : 'Not available';
+            if (s.status === 'failed' && s.error_message) {
+                document.getElementById('d-status').innerHTML += `<div style="margin-top:0.5rem;padding:0.5rem;background:rgba(180,20,20,0.1);border:1px solid rgba(180,20,20,0.2);border-radius:4px;color:var(--fail);font-size:0.75rem;" title="Failure reasoning">${s.error_message}</div>`;
+            }
+            const lnk = document.getElementById('d-link');
+            lnk.href = s.song_link || '#';
+            lnk.textContent = s.song_link ? 'Open audio ↗' : 'Not available';
 
-            // Form details (FR18)
             if (f) {
                 document.getElementById('d-genre').textContent = f.genre || '—';
                 document.getElementById('d-voice').textContent = f.voice_type || '—';
@@ -318,57 +294,37 @@
                 document.getElementById('d-detail').textContent = f.detail || '—';
             }
 
-            document.getElementById('loading-state').style.display = 'none';
-            document.getElementById('desc-layout').style.display = 'grid';
-
-        } catch (err) {
-            document.getElementById('loading-state').innerHTML =
-                `<p style="color:var(--fail)">Failed to load: ${err.message}</p>`;
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('layout').style.display = 'grid';
+        } catch (e) {
+            document.getElementById('loading').innerHTML =
+                `<p style="color:var(--fail)">${e.message}</p>`;
         }
     }
 
-    // ── Actions ───────────────────────────────────────────────────
-    function playSong() { window.location.href = `/songs/${SONG_ID}/`; }
-
-    async function shareSong() {
-        try {
-            const res = await fetch(`${API}/songs/${SONG_ID}/share/`, { method: 'POST' });
-            const data = await res.json();
-            const url = `${window.location.origin}${data.share_url}`;
-            document.getElementById('share-link-input').value = url;
-            document.getElementById('share-modal').classList.add('open');
-        } catch {
-            showToast('Failed to generate share link', 'error');
-        }
+    async function share() {
+        await fetch(`${API}/songs/${SONG_ID}/share/`, { method: 'POST' });
+        document.getElementById('share-input').value = `${location.origin}/shared/${SONG_ID}/`;
+        document.getElementById('share-modal').classList.add('open');
     }
 
-    async function downloadSong() {
-        try {
-            const res = await fetch(`${API}/songs/${SONG_ID}/download/`);
-            const data = await res.json();
-            showToast('Starting download…', 'info');
-            const a = document.createElement('a');
-            a.href = data.download_url; a.download = `${data.title}.mp3`; a.target = '_blank';
-            a.click();
-        } catch {
-            showToast('Download failed', 'error');
-        }
+    async function dl() {
+        const res = await fetch(`${API}/songs/${SONG_ID}/download/`);
+        const data = await res.json();
+        const a = document.createElement('a');
+        a.href = data.download_url; a.download = `${data.title}.mp3`; a.target = '_blank'; a.click();
     }
 
-    function copyShareLink() {
-        navigator.clipboard.writeText(document.getElementById('share-link-input').value)
+    function copyLink() {
+        navigator.clipboard.writeText(document.getElementById('share-input').value)
             .then(() => { showToast('Copied!', 'success'); closeModal(); });
     }
 
-    function closeModal() {
-        document.getElementById('share-modal').classList.remove('open');
-    }
-
+    function closeModal() { document.getElementById('share-modal').classList.remove('open'); }
     document.getElementById('share-modal').addEventListener('click', function (e) {
         if (e.target === this) closeModal();
     });
 
-    // ── Init ──────────────────────────────────────────────────────
-    loadDescription();
+    load();
 </script>
 {% endblock %}
