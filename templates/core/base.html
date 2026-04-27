@@ -56,29 +56,115 @@
             font-size: 1.6rem;
             color: var(--accent);
             text-decoration: none;
-            letter-spacing: 0.02em;
         }
 
-        .nav-links {
+        .nav-center {
             display: flex;
             gap: 2rem;
-            align-items: center;
         }
 
-        .nav-links a {
+        .nav-center a {
             color: var(--muted);
             text-decoration: none;
-            font-size: 0.9rem;
+            font-size: 0.875rem;
             letter-spacing: 0.05em;
             text-transform: uppercase;
             transition: color 0.2s;
         }
 
-        .nav-links a:hover,
-        .nav-links a.active {
+        .nav-center a:hover,
+        .nav-center a.active {
             color: var(--accent);
         }
 
+        /* ── User menu (Phase 16) ── */
+        .user-menu {
+            position: relative;
+        }
+
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--accent2);
+            border: 2px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: border-color 0.2s;
+            color: white;
+            overflow: hidden;
+        }
+
+        .user-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .user-avatar:hover {
+            border-color: var(--accent);
+        }
+
+        .user-dropdown {
+            position: absolute;
+            top: calc(100% + 10px);
+            right: 0;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            min-width: 200px;
+            overflow: hidden;
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(-8px);
+            transition: opacity 0.15s, transform 0.15s;
+            z-index: 200;
+        }
+
+        .user-menu.open .user-dropdown {
+            opacity: 1;
+            pointer-events: all;
+            transform: translateY(0);
+        }
+
+        .dropdown-header {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .dropdown-name {
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .dropdown-email {
+            color: var(--muted);
+            font-size: 0.75rem;
+            margin-top: 0.2rem;
+        }
+
+        .dropdown-item {
+            display: block;
+            padding: 0.8rem 1rem;
+            color: var(--text);
+            text-decoration: none;
+            font-size: 0.875rem;
+            transition: background 0.15s;
+        }
+
+        .dropdown-item:hover {
+            background: var(--border);
+        }
+
+        .dropdown-item.danger {
+            color: var(--fail);
+        }
+
+        /* ── Buttons ── */
         .btn {
             display: inline-flex;
             align-items: center;
@@ -113,6 +199,12 @@
         .btn-ghost:hover {
             border-color: var(--accent);
             color: var(--accent);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
         }
 
         /* ── Main layout ── */
@@ -153,7 +245,7 @@
             color: var(--accent2);
         }
 
-        /* ── Toast notifications ── */
+        /* ── Toast ── */
         #toast {
             position: fixed;
             bottom: 2rem;
@@ -200,7 +292,7 @@
             }
         }
 
-        /* ── Loading spinner ── */
+        /* ── Spinner ── */
         .spinner {
             width: 20px;
             height: 20px;
@@ -234,18 +326,109 @@
             color: var(--text);
             margin-bottom: 0.5rem;
         }
+
+        /* ── Modal ── */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+
+        .modal-overlay.open {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .modal {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 2rem;
+            width: 480px;
+            max-width: 90vw;
+        }
+
+        .modal h3 {
+            font-family: 'Playfair Display', serif;
+            margin-bottom: 1rem;
+            color: var(--accent);
+        }
+
+        .share-link-box {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .share-link-box input {
+            flex: 1;
+            padding: 0.6rem 1rem;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: 0.875rem;
+        }
+
+        /* ── Skeleton ── */
+        .skeleton {
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1
+            }
+
+            50% {
+                opacity: 0.5
+            }
+        }
     </style>
     {% block extra_styles %}{% endblock %}
 </head>
 
 <body>
+
     <nav>
         <a href="/library/" class="nav-logo">Chitra</a>
-        <div class="nav-links">
+
+        {% if user.is_authenticated %}
+        <div class="nav-center">
             <a href="/library/" id="nav-library">Library</a>
             <a href="/create/" id="nav-create">Create</a>
-            <a href="/create/" class="btn btn-primary">+ New Song</a>
         </div>
+
+        <!-- Phase 16: real user menu -->
+        <div class="user-menu" id="user-menu">
+            <div class="user-avatar" onclick="toggleDropdown()" title="{{ user.get_full_name }}">
+                {% if user.social_auth.all %}
+                {{ user.first_name|first|upper }}{{ user.last_name|first|upper }}
+                {% else %}
+                {{ user.username|first|upper }}
+                {% endif %}
+            </div>
+            <div class="user-dropdown">
+                <div class="dropdown-header">
+                    <div class="dropdown-name">{{ user.get_full_name|default:user.username }}</div>
+                    <div class="dropdown-email">{{ user.email }}</div>
+                </div>
+                <a href="/logout/" class="dropdown-item danger">Sign out</a>
+            </div>
+        </div>
+
+        {% else %}
+        <a href="/login/" class="btn btn-primary">Sign in</a>
+        {% endif %}
     </nav>
 
     <main>
@@ -255,13 +438,22 @@
     <div id="toast"></div>
 
     <script>
-        // Highlight active nav link
+        // Active nav highlight
         const path = window.location.pathname;
-        document.querySelectorAll('.nav-links a[id]').forEach(a => {
+        document.querySelectorAll('.nav-center a').forEach(a => {
             if (path.startsWith(a.getAttribute('href'))) a.classList.add('active');
         });
 
-        // Toast utility
+        // User dropdown toggle
+        function toggleDropdown() {
+            document.getElementById('user-menu').classList.toggle('open');
+        }
+        document.addEventListener('click', e => {
+            const menu = document.getElementById('user-menu');
+            if (menu && !menu.contains(e.target)) menu.classList.remove('open');
+        });
+
+        // Toast
         function showToast(msg, type = 'info') {
             const t = document.getElementById('toast');
             const el = document.createElement('div');
@@ -271,15 +463,19 @@
             setTimeout(() => el.remove(), 3500);
         }
 
-        // Badge helper
+        // Status badge
         function statusBadge(status) {
             const map = {
-                success: 'badge-success',
-                failed: 'badge-failed',
-                in_progress: 'badge-progress',
-                pending: 'badge-pending',
+                success: 'badge-success', failed: 'badge-failed',
+                in_progress: 'badge-progress', pending: 'badge-pending',
             };
-            return `<span class="badge ${map[status] || 'badge-pending'}">${status}</span>`;
+            return `<span class="badge ${map[status] || 'badge-pending'}">${status.replace('_', ' ')}</span>`;
+        }
+
+        // Format duration
+        function fmtDuration(secs) {
+            if (!secs) return '--:--';
+            return `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
         }
     </script>
     {% block extra_scripts %}{% endblock %}

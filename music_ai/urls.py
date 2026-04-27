@@ -1,7 +1,10 @@
 from django.contrib import admin
 from django.urls import path, include
-from core.views.pages import library_page, create_page,  song_page, description_page
-
+from django.contrib.auth import views as auth_views
+from core.views.pages import (
+    login_page, library_page, create_page,
+    song_page, description_page, shared_song_page,
+)
 
 urlpatterns = [
     path("admin/",   admin.site.urls),
