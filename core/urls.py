@@ -3,7 +3,7 @@ from .views.user import UserListCreateView, UserDetailView
 from .views.creator import CreatorListCreateView, CreatorDetailView
 from .views.listener import ListenerListCreateView, ListenerDetailView
 from .views.library import LibraryListView, LibraryDetailView
-from .views.song_form import SongFormListCreateView, SongFormDetailView
+from .views.song_form import SongFormListCreateView, SongFormDetailView, SongFormReviewView
 from .views.song import SongListCreateView, SongDetailView, SongDescriptionView, SongShareView, SharedSongView, SongCoverView, SongDownloadView
 
 urlpatterns = [
@@ -22,6 +22,7 @@ urlpatterns = [
     # Song forms
     path("song-forms/",         SongFormListCreateView.as_view(),name="songform-list"),
     path("song-forms/<int:pk>/",SongFormDetailView.as_view(),    name="songform-detail"),
+    path("song-forms/review/",  SongFormReviewView.as_view(),    name="songform-review"),
     # Songs
     path("songs/",              SongListCreateView.as_view(),    name="song-list"),
     path("songs/<int:pk>/",     SongDetailView.as_view(),        name="song-detail"),

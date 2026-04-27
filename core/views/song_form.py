@@ -177,3 +177,34 @@ class SongFormDetailView(View):
             return not_found()
         sf.delete()
         return JsonResponse({"deleted": True}, status=204)
+
+@method_decorator(csrf_exempt, name="dispatch")
+class SongFormReviewView(View):
+    """
+    POST /api/song-forms/review/
+    Accepts form data and returns it for user confirmation
+    before actual generation (FR2).
+    No song or form is created — read only preview.
+    """
+    def post(self, request):
+        d = parse_json(request)
+
+        required = ["title", "occasion", "genre", "voice_type", "mood"]
+        missing  = [f for f in required if not d.get(f)]
+        if missing:
+            return JsonResponse(
+                {"error": f"Missing required fields: {', '.join(missing)}"},
+                status=400
+            )
+
+        return JsonResponse({
+            "review": {
+                "title":      d["title"],
+                "occasion":   d["occasion"],
+                "genre":      d["genre"],
+                "voice_type": d["voice_type"],
+                "mood":       d["mood"],
+                "detail":     d.get("detail", ""),
+            },
+            "message": "Please confirm to proceed with song generation",
+        })
