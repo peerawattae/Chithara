@@ -1,0 +1,558 @@
+{% extends "core/base.html" %}
+
+{% block title %}My Library — Chitra{% endblock %}
+
+{% block extra_styles %}
+<style>
+    /* ── Page header ── */
+    .page-header {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        margin-bottom: 2.5rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .page-header h1 {
+        font-family: 'Playfair Display', serif;
+        font-size: 2.2rem;
+        font-weight: 400;
+        color: var(--text);
+    }
+
+    .page-header h1 span {
+        color: var(--accent);
+    }
+
+    .library-meta {
+        color: var(--muted);
+        font-size: 0.875rem;
+        margin-top: 0.3rem;
+    }
+
+    /* ── Song grid ── */
+    .song-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 1.2rem;
+    }
+
+    /* ── Song card ── */
+    .song-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        overflow: hidden;
+        cursor: pointer;
+        transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+        position: relative;
+    }
+
+    .song-card:hover {
+        border-color: var(--accent);
+        transform: translateY(-3px);
+        box-shadow: 0 8px 32px rgba(200, 169, 110, 0.12);
+    }
+
+    .song-cover {
+        width: 100%;
+        aspect-ratio: 1;
+        background: linear-gradient(135deg, #1e1e2e 0%, #2a1f3d 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .song-cover img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .song-cover-placeholder {
+        font-size: 3rem;
+        opacity: 0.3;
+    }
+
+    /* Play overlay */
+    .play-overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.2s;
+    }
+
+    .song-card:hover .play-overlay {
+        opacity: 1;
+    }
+
+    .play-btn-overlay {
+        width: 52px;
+        height: 52px;
+        background: var(--accent);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #0a0a0f;
+        font-size: 1.2rem;
+    }
+
+    .song-info {
+        padding: 1rem 1.1rem;
+    }
+
+    .song-title {
+        font-weight: 500;
+        font-size: 0.95rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-bottom: 0.4rem;
+    }
+
+    .song-meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        color: var(--muted);
+        font-size: 0.8rem;
+    }
+
+    .song-duration {
+        letter-spacing: 0.02em;
+    }
+
+    /* ── Song card actions ── */
+    .song-actions {
+        display: flex;
+        gap: 0.4rem;
+        padding: 0.7rem 1.1rem;
+        border-top: 1px solid var(--border);
+    }
+
+    .action-btn {
+        flex: 1;
+        padding: 0.45rem;
+        background: transparent;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--muted);
+        font-size: 0.75rem;
+        cursor: pointer;
+        transition: all 0.15s;
+        text-align: center;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.3rem;
+    }
+
+    .action-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+    }
+
+    .action-btn.danger:hover {
+        border-color: var(--fail);
+        color: var(--fail);
+    }
+
+    /* ── Loading state ── */
+    .loading-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 1.2rem;
+    }
+
+    .skeleton {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        overflow: hidden;
+        animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    .skeleton-cover {
+        width: 100%;
+        aspect-ratio: 1;
+        background: var(--border);
+    }
+
+    .skeleton-line {
+        height: 12px;
+        background: var(--border);
+        border-radius: 4px;
+        margin: 0.5rem 1rem;
+    }
+
+    .skeleton-line.short {
+        width: 60%;
+    }
+
+    @keyframes pulse {
+
+        0%,
+        100% {
+            opacity: 1;
+        }
+
+        50% {
+            opacity: 0.5;
+        }
+    }
+
+    /* ── Share modal ── */
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 500;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s;
+    }
+
+    .modal-overlay.open {
+        opacity: 1;
+        pointer-events: all;
+    }
+
+    .modal {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 2rem;
+        width: 480px;
+        max-width: 90vw;
+    }
+
+    .modal h3 {
+        font-family: 'Playfair Display', serif;
+        margin-bottom: 1rem;
+        color: var(--accent);
+    }
+
+    .share-link-box {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+
+    .share-link-box input {
+        flex: 1;
+        padding: 0.6rem 1rem;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--text);
+        font-size: 0.875rem;
+    }
+
+    /* ── User selector (simple, auth out of scope) ── */
+    .user-bar {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 2rem;
+        padding: 1rem 1.5rem;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+    }
+
+    .user-bar label {
+        color: var(--muted);
+        font-size: 0.875rem;
+    }
+
+    .user-bar input {
+        padding: 0.4rem 0.8rem;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--text);
+        font-size: 0.875rem;
+        width: 80px;
+    }
+
+    .user-bar input:focus {
+        outline: none;
+        border-color: var(--accent);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>My <span>Library</span></h1>
+        <p class="library-meta" id="library-meta">Loading songs…</p>
+    </div>
+    <a href="/create/" class="btn btn-primary">+ Create New Song</a>
+</div>
+
+<!-- Simple user selector (auth out of scope per SRS) -->
+<div class="user-bar">
+    <label for="uid-input">User ID:</label>
+    <input type="number" id="uid-input" value="1" min="1" />
+    <button class="btn btn-ghost" onclick="loadLibrary()">Load</button>
+    <span id="user-name" style="color:var(--muted);font-size:0.875rem;"></span>
+</div>
+
+<!-- Song grid -->
+<div id="song-container">
+    <!-- Skeleton loaders -->
+    <div class="loading-grid" id="skeletons">
+        ${[...Array(6)].map(() => `
+        <div class="skeleton">
+            <div class="skeleton-cover"></div>
+            <div class="skeleton-line" style="margin-top:1rem"></div>
+            <div class="skeleton-line short"></div>
+        </div>
+        `).join('')}
+    </div>
+</div>
+
+<!-- Share modal -->
+<div class="modal-overlay" id="share-modal">
+    <div class="modal">
+        <h3>Share Song</h3>
+        <p style="color:var(--muted);font-size:0.875rem;">Anyone with this link can listen to this song.</p>
+        <div class="share-link-box">
+            <input type="text" id="share-link-input" readonly />
+            <button class="btn btn-primary" onclick="copyShareLink()">Copy</button>
+        </div>
+        <div style="margin-top:1.5rem;text-align:right;">
+            <button class="btn btn-ghost" onclick="closeShareModal()">Close</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    const API = '/api';
+    let currentUserId = 1;
+
+    // ── Format duration ──────────────────────────────────────────
+    function fmtDuration(secs) {
+        if (!secs) return '--:--';
+        const m = Math.floor(secs / 60);
+        const s = secs % 60;
+        return `${m}:${s.toString().padStart(2, '0')}`;
+    }
+
+    // ── Genre badge color ─────────────────────────────────────────
+    function genreColor(genre) {
+        const colors = {
+            pop: '#e05c9a', hiphop: '#e07a5c', rock: '#5c7ae0',
+            reggae: '#5ce07a', country: '#e0c35c', 'r&b': '#9c5ce0', edm: '#5ce0d4',
+        };
+        return colors[(genre || '').toLowerCase()] || 'var(--accent2)';
+    }
+
+    // ── Build song card HTML ──────────────────────────────────────
+    function songCardHTML(song) {
+        const cover = song.cover_image
+            ? `<img src="${song.cover_image}" alt="${song.title}" onerror="this.style.display='none'">`
+            : `<div class="song-cover-placeholder">♪</div>`;
+
+        const isReady = song.status === 'success';
+
+        return `
+      <div class="song-card" data-id="${song.id}">
+        <div class="song-cover">
+          ${cover}
+          ${isReady ? `
+          <div class="play-overlay" onclick="goToSong(${song.id})">
+            <div class="play-btn-overlay">▶</div>
+          </div>` : ''}
+        </div>
+        <div class="song-info">
+          <div class="song-title" title="${song.title}">${song.title}</div>
+          <div class="song-meta">
+            ${statusBadge(song.status)}
+            <span class="song-duration">${fmtDuration(song.duration)}</span>
+          </div>
+        </div>
+        <div class="song-actions">
+          <button class="action-btn" onclick="goToSong(${song.id})" ${!isReady ? 'disabled style="opacity:0.4"' : ''}>
+            ▶ Play
+          </button>
+          <button class="action-btn" onclick="shareSong(${song.id})" ${!isReady ? 'disabled style="opacity:0.4"' : ''}>
+            ↗ Share
+          </button>
+          <button class="action-btn" onclick="downloadSong(${song.id})" ${!isReady ? 'disabled style="opacity:0.4"' : ''}>
+            ↓ DL
+          </button>
+          <button class="action-btn danger" onclick="deleteSong(${song.id})">
+            ✕
+          </button>
+        </div>
+      </div>
+    `;
+    }
+
+    // ── Load library ──────────────────────────────────────────────
+    async function loadLibrary() {
+        currentUserId = parseInt(document.getElementById('uid-input').value) || 1;
+        const container = document.getElementById('song-container');
+
+        // Show skeletons
+        container.innerHTML = `
+      <div class="loading-grid">
+        ${Array(6).fill(`
+          <div class="skeleton">
+            <div class="skeleton-cover"></div>
+            <div class="skeleton-line" style="margin-top:1rem"></div>
+            <div class="skeleton-line short"></div>
+          </div>`).join('')}
+      </div>`;
+
+        try {
+            // Get creator's library
+            const creatorsRes = await fetch(`${API}/creators/`);
+            const creators = await creatorsRes.json();
+            const creator = creators.find(c => c.id === currentUserId);
+
+            if (!creator) {
+                container.innerHTML = `
+          <div class="empty-state">
+            <div class="icon">🎵</div>
+            <h3>No creator found</h3>
+            <p>Create your first song to get started.</p>
+            <a href="/create/" class="btn btn-primary" style="margin-top:1.5rem">+ Create Song</a>
+          </div>`;
+                return;
+            }
+
+            document.getElementById('user-name').textContent = `— ${creator.name}`;
+
+            // Get libraries
+            const libsRes = await fetch(`${API}/libraries/`);
+            const libs = await libsRes.json();
+            const lib = libs.find(l => l.owner__name === creator.name);
+
+            if (!lib) {
+                container.innerHTML = `
+          <div class="empty-state">
+            <div class="icon">🎵</div>
+            <h3>Your library is empty</h3>
+            <p>Generate your first AI song to see it here.</p>
+            <a href="/create/" class="btn btn-primary" style="margin-top:1.5rem">+ Create Song</a>
+          </div>`;
+                return;
+            }
+
+            // Get library with songs
+            const libRes = await fetch(`${API}/libraries/${lib.id}/`);
+            const libData = await libRes.json();
+            const songs = libData.songs || [];
+
+            document.getElementById('library-meta').textContent =
+                `${songs.length} song${songs.length !== 1 ? 's' : ''} · sorted by newest`;
+
+            if (songs.length === 0) {
+                container.innerHTML = `
+          <div class="empty-state">
+            <div class="icon">🎵</div>
+            <h3>Your library is empty</h3>
+            <p>Generate your first AI song to see it here.</p>
+            <a href="/create/" class="btn btn-primary" style="margin-top:1.5rem">+ Create Song</a>
+          </div>`;
+                return;
+            }
+
+            container.innerHTML = `<div class="song-grid">${songs.map(songCardHTML).join('')}</div>`;
+
+        } catch (err) {
+            container.innerHTML = `
+        <div class="empty-state">
+          <div class="icon">⚠️</div>
+          <h3>Failed to load library</h3>
+          <p>${err.message}</p>
+        </div>`;
+        }
+    }
+
+    // ── Navigation ────────────────────────────────────────────────
+    function goToSong(id) {
+        window.location.href = `/songs/${id}/`;
+    }
+
+    // ── Share ─────────────────────────────────────────────────────
+    async function shareSong(id) {
+        try {
+            const res = await fetch(`${API}/songs/${id}/share/`, { method: 'POST' });
+            const data = await res.json();
+            const url = `${window.location.origin}${data.share_url}`;
+            document.getElementById('share-link-input').value = url;
+            document.getElementById('share-modal').classList.add('open');
+            showToast('Share link generated', 'success');
+        } catch {
+            showToast('Failed to generate share link', 'error');
+        }
+    }
+
+    function closeShareModal() {
+        document.getElementById('share-modal').classList.remove('open');
+    }
+
+    function copyShareLink() {
+        const input = document.getElementById('share-link-input');
+        navigator.clipboard.writeText(input.value).then(() => {
+            showToast('Link copied to clipboard!', 'success');
+            closeShareModal();
+        });
+    }
+
+    // ── Download ──────────────────────────────────────────────────
+    async function downloadSong(id) {
+        try {
+            const res = await fetch(`${API}/songs/${id}/download/`);
+            const data = await res.json();
+            showToast('Starting download…', 'info');
+            const a = document.createElement('a');
+            a.href = data.download_url;
+            a.download = `${data.title}.mp3`;
+            a.target = '_blank';
+            a.click();
+            showToast('Download started', 'success');
+        } catch {
+            showToast('Download failed', 'error');
+        }
+    }
+
+    // ── Delete ────────────────────────────────────────────────────
+    async function deleteSong(id) {
+        if (!confirm('Delete this song? This cannot be undone.')) return;
+        try {
+            await fetch(`${API}/songs/${id}/`, { method: 'DELETE' });
+            showToast('Song deleted', 'success');
+            loadLibrary();
+        } catch {
+            showToast('Failed to delete song', 'error');
+        }
+    }
+
+    // Close modal on overlay click
+    document.getElementById('share-modal').addEventListener('click', function (e) {
+        if (e.target === this) closeShareModal();
+    });
+
+    // ── Init ──────────────────────────────────────────────────────
+    loadLibrary();
+</script>
+{% endblock %}

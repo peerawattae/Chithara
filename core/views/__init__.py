@@ -18,4 +18,5 @@ __all__ = [
     "SongFormDetailView",
     "SongListCreateView",
     "SongDetailView",
+    "library_page",
 ]

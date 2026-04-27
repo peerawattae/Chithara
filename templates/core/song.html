@@ -1,0 +1,594 @@
+{% extends "core/base.html" %}
+
+{% block title %}Song — Chitra{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .song-layout {
+        display: grid;
+        grid-template-columns: 340px 1fr;
+        gap: 2.5rem;
+        align-items: start;
+    }
+
+    @media (max-width: 800px) {
+        .song-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* ── Cover art ── */
+    .cover-art {
+        aspect-ratio: 1;
+        border-radius: var(--radius);
+        overflow: hidden;
+        background: linear-gradient(135deg, #1e1e2e 0%, #2a1f3d 50%, #1a2a2a 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 6rem;
+        opacity: 0.6;
+        position: relative;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+
+    .cover-art img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        position: absolute;
+        inset: 0;
+    }
+
+    .cover-art.playing {
+        animation: coverPulse 2s ease-in-out infinite;
+    }
+
+    @keyframes coverPulse {
+
+        0%,
+        100% {
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        50% {
+            box-shadow: 0 20px 80px rgba(200, 169, 110, 0.25);
+        }
+    }
+
+    /* ── Song info ── */
+    .song-info-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .song-title-lg {
+        font-family: 'Playfair Display', serif;
+        font-size: 2.4rem;
+        font-weight: 400;
+        line-height: 1.2;
+    }
+
+    .song-creator {
+        color: var(--muted);
+        font-size: 0.9rem;
+        margin-top: 0.3rem;
+    }
+
+    .song-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+    }
+
+    .tag {
+        padding: 0.25rem 0.8rem;
+        border-radius: 20px;
+        border: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 0.75rem;
+        letter-spacing: 0.04em;
+    }
+
+    /* ── Player ── */
+    .player {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 1.5rem;
+    }
+
+    /* Progress bar (FR14: scroll through duration) */
+    .progress-container {
+        position: relative;
+        height: 4px;
+        background: var(--border);
+        border-radius: 2px;
+        cursor: pointer;
+        margin: 1rem 0 0.5rem;
+    }
+
+    .progress-container:hover {
+        height: 6px;
+        margin-top: 0.9rem;
+    }
+
+    .progress-fill {
+        height: 100%;
+        background: var(--accent);
+        border-radius: 2px;
+        pointer-events: none;
+        transition: width 0.1s linear;
+    }
+
+    .progress-thumb {
+        position: absolute;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: 14px;
+        height: 14px;
+        background: var(--accent);
+        border-radius: 50%;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.15s;
+    }
+
+    .progress-container:hover .progress-thumb {
+        opacity: 1;
+    }
+
+    /* Time display (FR13: show duration) */
+    .time-display {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.75rem;
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+    }
+
+    /* Controls (FR12, FR15, FR16) */
+    .controls {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1.5rem;
+        margin: 1.2rem 0;
+    }
+
+    .ctrl-btn {
+        background: none;
+        border: none;
+        color: var(--muted);
+        cursor: pointer;
+        font-size: 1.2rem;
+        padding: 0.5rem;
+        border-radius: 50%;
+        transition: color 0.15s, background 0.15s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .ctrl-btn:hover {
+        color: var(--text);
+        background: var(--border);
+    }
+
+    /* Play/pause button (FR16: pause) */
+    .play-pause-btn {
+        width: 56px;
+        height: 56px;
+        background: var(--accent);
+        border: none;
+        border-radius: 50%;
+        color: #0a0a0f;
+        font-size: 1.4rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: transform 0.15s, background 0.15s;
+        box-shadow: 0 4px 20px rgba(200, 169, 110, 0.3);
+    }
+
+    .play-pause-btn:hover {
+        transform: scale(1.08);
+        background: #d4b87a;
+    }
+
+    .play-pause-btn:active {
+        transform: scale(0.96);
+    }
+
+    /* Volume */
+    .volume-row {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        padding-top: 0.8rem;
+        border-top: 1px solid var(--border);
+        margin-top: 0.5rem;
+    }
+
+    .volume-row span {
+        color: var(--muted);
+        font-size: 0.9rem;
+    }
+
+    input[type=range] {
+        flex: 1;
+        -webkit-appearance: none;
+        height: 3px;
+        background: var(--border);
+        border-radius: 2px;
+        outline: none;
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 14px;
+        height: 14px;
+        background: var(--accent);
+        border-radius: 50%;
+        cursor: pointer;
+    }
+
+    /* ── Action buttons ── */
+    .song-actions-row {
+        display: flex;
+        gap: 0.8rem;
+        flex-wrap: wrap;
+    }
+
+    /* ── Edit title inline ── */
+    .title-edit-wrap {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+    }
+
+    #title-input {
+        font-family: 'Playfair Display', serif;
+        font-size: 2.4rem;
+        background: transparent;
+        border: none;
+        border-bottom: 2px solid transparent;
+        color: var(--text);
+        width: 100%;
+        outline: none;
+        transition: border-color 0.2s;
+    }
+
+    #title-input:focus {
+        border-color: var(--accent);
+    }
+
+    /* ── Cover upload ── */
+    .cover-upload-hint {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: rgba(0, 0, 0, 0.7);
+        text-align: center;
+        padding: 0.5rem;
+        font-size: 0.75rem;
+        color: var(--muted);
+        opacity: 0;
+        transition: opacity 0.2s;
+        cursor: pointer;
+    }
+
+    .cover-art:hover .cover-upload-hint {
+        opacity: 1;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:1.5rem;">
+    <a href="/library/" class="btn btn-ghost" style="font-size:0.8rem;">← Back to Library</a>
+</div>
+
+<div class="song-layout" id="song-layout" style="display:none;">
+    <!-- Cover art -->
+    <div>
+        <div class="cover-art" id="cover-art">
+            <span>♪</span>
+            <div class="cover-upload-hint" onclick="promptCoverUpload()">📷 Change cover</div>
+        </div>
+        <input type="hidden" id="cover-url-input" />
+    </div>
+
+    <!-- Song info + player -->
+    <div class="song-info-panel">
+        <!-- Title (editable, FR9) -->
+        <div>
+            <div class="title-edit-wrap">
+                <input type="text" id="title-input" placeholder="Song Title" onblur="saveTitle()" />
+            </div>
+            <div class="song-creator" id="song-creator"></div>
+            <div class="song-tags" id="song-tags"></div>
+        </div>
+
+        <!-- Audio player -->
+        <div class="player">
+            <!-- Progress bar (FR14: scroll/seek) -->
+            <div class="progress-container" id="progress-bar" onclick="seekTo(event)">
+                <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+                <div class="progress-thumb" id="progress-thumb" style="left:0%"></div>
+            </div>
+
+            <!-- Time (FR13) -->
+            <div class="time-display">
+                <span id="time-current">0:00</span>
+                <span id="time-total">0:00</span>
+            </div>
+
+            <!-- Controls (FR12, FR15, FR16) -->
+            <div class="controls">
+                <!-- Skip back 10s (FR15) -->
+                <button class="ctrl-btn" onclick="skipBack()" title="Back 10s">⟨⟨</button>
+                <!-- Play/Pause (FR16) -->
+                <button class="play-pause-btn" id="play-btn" onclick="togglePlay()">▶</button>
+                <!-- Skip forward 10s (FR15) -->
+                <button class="ctrl-btn" onclick="skipForward()" title="Forward 10s">⟩⟩</button>
+            </div>
+
+            <!-- Volume -->
+            <div class="volume-row">
+                <span>🔈</span>
+                <input type="range" id="volume" min="0" max="1" step="0.05" value="1" oninput="setVolume(this.value)" />
+                <span>🔊</span>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="song-actions-row">
+            <button class="btn btn-ghost" onclick="shareSong()">↗ Share</button>
+            <button class="btn btn-ghost" onclick="downloadSong()">↓ Download</button>
+            <a id="desc-link" href="#" class="btn btn-ghost">📋 Description</a>
+        </div>
+    </div>
+</div>
+
+<!-- Loading state -->
+<div id="loading-state" style="text-align:center;padding:5rem;">
+    <div class="spinner" style="width:40px;height:40px;margin:0 auto 1rem;"></div>
+    <p style="color:var(--muted);">Loading song…</p>
+</div>
+
+<!-- Share modal -->
+<div class="modal-overlay" id="share-modal">
+    <div class="modal">
+        <h3>Share Song</h3>
+        <p style="color:var(--muted);font-size:0.875rem;">Anyone with this link can stream this song.</p>
+        <div class="share-link-box">
+            <input type="text" id="share-link-input" readonly />
+            <button class="btn btn-primary" onclick="copyShareLink()">Copy</button>
+        </div>
+        <div style="margin-top:1.5rem;text-align:right;">
+            <button class="btn btn-ghost" onclick="closeModal('share-modal')">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Cover upload modal -->
+<div class="modal-overlay" id="cover-modal">
+    <div class="modal">
+        <h3>Update Cover Image</h3>
+        <div class="field" style="margin-top:1rem;">
+            <label>Image URL</label>
+            <input type="text" id="cover-url-field" placeholder="https://example.com/image.jpg" />
+        </div>
+        <div style="margin-top:1.5rem;display:flex;gap:0.8rem;justify-content:flex-end;">
+            <button class="btn btn-ghost" onclick="closeModal('cover-modal')">Cancel</button>
+            <button class="btn btn-primary" onclick="saveCover()">Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden audio element -->
+<audio id="audio-el"></audio>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    const API = '/api';
+    const SONG_ID = {{ song_id }};
+    let songData = null;
+    const audio = document.getElementById('audio-el');
+
+    // ── Load song ─────────────────────────────────────────────────
+    async function loadSong() {
+        try {
+            const res = await fetch(`${API}/songs/${SONG_ID}/`);
+            songData = await res.json();
+
+            document.getElementById('title-input').value = songData.title;
+            document.getElementById('song-creator').textContent = `by ${songData.created_by}`;
+            document.getElementById('desc-link').href = `/songs/${SONG_ID}/description/`;
+
+            // Cover image
+            if (songData.cover_image) {
+                const art = document.getElementById('cover-art');
+                art.innerHTML = `
+          <img src="${songData.cover_image}" alt="${songData.title}">
+          <div class="cover-upload-hint" onclick="promptCoverUpload()">📷 Change cover</div>`;
+            }
+
+            // Load song form tags
+            if (songData.library_id) {
+                loadTags();
+            }
+
+            // Set audio source
+            if (songData.song_link) {
+                audio.src = songData.song_link;
+                audio.load();
+            }
+
+            document.getElementById('loading-state').style.display = 'none';
+            document.getElementById('song-layout').style.display = 'grid';
+
+        } catch (err) {
+            document.getElementById('loading-state').innerHTML =
+                `<p style="color:var(--fail)">Failed to load song: ${err.message}</p>`;
+        }
+    }
+
+    async function loadTags() {
+        try {
+            const res = await fetch(`${API}/songs/${SONG_ID}/description/`);
+            const data = await res.json();
+            const sf = data.form_details;
+            if (!sf) return;
+            const tags = [sf.genre, sf.occasion, sf.mood].filter(Boolean);
+            document.getElementById('song-tags').innerHTML =
+                tags.map(t => `<span class="tag">${t}</span>`).join('');
+        } catch { /* tags are optional */ }
+    }
+
+    // ── Playback controls ─────────────────────────────────────────
+
+    // FR16: Play/Pause
+    function togglePlay() {
+        if (audio.paused) {
+            audio.play();
+            document.getElementById('play-btn').textContent = '⏸';
+            document.getElementById('cover-art').classList.add('playing');
+        } else {
+            audio.pause();
+            document.getElementById('play-btn').textContent = '▶';
+            document.getElementById('cover-art').classList.remove('playing');
+        }
+    }
+
+    // FR15: Skip forward/back
+    function skipForward() { audio.currentTime = Math.min(audio.currentTime + 10, audio.duration || 0); }
+    function skipBack() { audio.currentTime = Math.max(audio.currentTime - 10, 0); }
+
+    // FR14: Seek by clicking progress bar
+    function seekTo(e) {
+        if (!audio.duration) return;
+        const bar = document.getElementById('progress-bar');
+        const rect = bar.getBoundingClientRect();
+        const pct = (e.clientX - rect.left) / rect.width;
+        audio.currentTime = pct * audio.duration;
+    }
+
+    function setVolume(v) { audio.volume = v; }
+
+    // FR13: Update time display and progress bar
+    audio.addEventListener('timeupdate', () => {
+        if (!audio.duration) return;
+        const pct = (audio.currentTime / audio.duration) * 100;
+        document.getElementById('progress-fill').style.width = pct + '%';
+        document.getElementById('progress-thumb').style.left = pct + '%';
+        document.getElementById('time-current').textContent = fmtTime(audio.currentTime);
+    });
+
+    audio.addEventListener('loadedmetadata', () => {
+        document.getElementById('time-total').textContent = fmtTime(audio.duration);
+    });
+
+    audio.addEventListener('ended', () => {
+        document.getElementById('play-btn').textContent = '▶';
+        document.getElementById('cover-art').classList.remove('playing');
+    });
+
+    function fmtTime(s) {
+        if (!s || isNaN(s)) return '0:00';
+        const m = Math.floor(s / 60);
+        const sec = Math.floor(s % 60);
+        return `${m}:${sec.toString().padStart(2, '0')}`;
+    }
+
+    // ── Edit title (FR9) ──────────────────────────────────────────
+    async function saveTitle() {
+        const newTitle = document.getElementById('title-input').value.trim();
+        if (!newTitle || newTitle === songData?.title) return;
+        try {
+            await fetch(`${API}/songs/${SONG_ID}/`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title: newTitle }),
+            });
+            showToast('Song name updated', 'success');
+        } catch {
+            showToast('Failed to update title', 'error');
+        }
+    }
+
+    // ── Share (FR3) ───────────────────────────────────────────────
+    async function shareSong() {
+        try {
+            const res = await fetch(`${API}/songs/${SONG_ID}/share/`, { method: 'POST' });
+            const data = await res.json();
+            const url = `${window.location.origin}${data.share_url}`;
+            document.getElementById('share-link-input').value = url;
+            document.getElementById('share-modal').classList.add('open');
+        } catch {
+            showToast('Failed to generate share link', 'error');
+        }
+    }
+
+    function copyShareLink() {
+        navigator.clipboard.writeText(document.getElementById('share-link-input').value)
+            .then(() => { showToast('Link copied!', 'success'); closeModal('share-modal'); });
+    }
+
+    // ── Download (FR4) ────────────────────────────────────────────
+    async function downloadSong() {
+        try {
+            const res = await fetch(`${API}/songs/${SONG_ID}/download/`);
+            const data = await res.json();
+            showToast('Starting download…', 'info');
+            const a = document.createElement('a');
+            a.href = data.download_url; a.download = `${data.title}.mp3`; a.target = '_blank';
+            a.click();
+            showToast('Download started', 'success');
+        } catch {
+            showToast('Download failed', 'error');
+        }
+    }
+
+    // ── Cover image (FR5, FR6) ────────────────────────────────────
+    function promptCoverUpload() {
+        document.getElementById('cover-modal').classList.add('open');
+    }
+
+    async function saveCover() {
+        const url = document.getElementById('cover-url-field').value.trim();
+        if (!url) { showToast('Please enter an image URL', 'error'); return; }
+        try {
+            await fetch(`${API}/songs/${SONG_ID}/cover/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cover_image_url: url }),
+            });
+            const art = document.getElementById('cover-art');
+            art.innerHTML = `
+        <img src="${url}" alt="cover">
+        <div class="cover-upload-hint" onclick="promptCoverUpload()">📷 Change cover</div>`;
+            closeModal('cover-modal');
+            showToast('Cover image updated', 'success');
+        } catch {
+            showToast('Failed to update cover', 'error');
+        }
+    }
+
+    // ── Modal helpers ─────────────────────────────────────────────
+    function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+    document.querySelectorAll('.modal-overlay').forEach(m => {
+        m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+    });
+
+    // ── Init ──────────────────────────────────────────────────────
+    loadSong();
+</script>
+{% endblock %}
