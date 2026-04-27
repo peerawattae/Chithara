@@ -171,3 +171,36 @@ class SharedSongView(View):
                 "mood":       sf.mood,
             } if sf else None,
         })
+
+@method_decorator(csrf_exempt, name="dispatch")
+class SongCoverView(View):
+    """
+    POST /api/songs/<id>/cover/
+    Upload or update cover image URL for a song (FR5, FR6).
+    Accepts JSON with cover_image_url field.
+    Cover image is stored as a URL string per domain model decision (A4).
+    """
+    def post(self, request, pk):
+        try:
+            song = Song.objects.get(pk=pk)
+        except Song.DoesNotExist:
+            return not_found()
+
+        d = parse_json(request)
+        cover_url = d.get("cover_image_url", "").strip()
+
+        if not cover_url:
+            return JsonResponse(
+                {"error": "cover_image_url is required"},
+                status=400
+            )
+
+        song.cover_image = cover_url
+        song.save()
+
+        return JsonResponse({
+            "song_id":     song.id,
+            "title":       song.title,
+            "cover_image": song.cover_image,
+            "message":     "Cover image updated successfully",
+        })
