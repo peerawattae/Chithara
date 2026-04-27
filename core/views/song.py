@@ -204,3 +204,36 @@ class SongCoverView(View):
             "cover_image": song.cover_image,
             "message":     "Cover image updated successfully",
         })
+
+@method_decorator(csrf_exempt, name="dispatch")
+class SongDownloadView(View):
+    """
+    GET /api/songs/<id>/download/
+    Returns the song download URL with download metadata (FR4, FR8).
+    """
+    def get(self, request, pk):
+        try:
+            song = Song.objects.get(pk=pk)
+        except Song.DoesNotExist:
+            return not_found()
+
+        if not song.song_link:
+            return JsonResponse(
+                {"error": "Song file is not available yet"},
+                status=404
+            )
+
+        if song.status != "success":
+            return JsonResponse(
+                {"error": f"Song is not ready for download (status: {song.status})"},
+                status=400
+            )
+
+        return JsonResponse({
+            "song_id":       song.id,
+            "title":         song.title,
+            "download_url":  song.song_link,
+            "format":        "mp3",
+            "duration":      song.duration,
+            "message":       "Song ready for download",
+        })
