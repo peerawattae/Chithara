@@ -26,6 +26,7 @@ class Song(models.Model):
     create_at   = models.DateTimeField(auto_now_add=True)
     cover_image = models.URLField(blank=True, null=True,
                       help_text="Optional cover image URL [0..1]")
+    is_shared = models.BooleanField(default=False)
 
     # Aggregation: Song outlives its Library
     library     = models.ForeignKey(
