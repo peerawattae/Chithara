@@ -1,0 +1,482 @@
+{% extends "core/base.html" %}
+{% block title %}Song — Chitra{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .song-layout {
+        display: grid;
+        grid-template-columns: 320px 1fr;
+        gap: 2.5rem;
+        align-items: start;
+    }
+
+    @media(max-width:800px) {
+        .song-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .cover-art {
+        aspect-ratio: 1;
+        border-radius: var(--radius);
+        overflow: hidden;
+        background: linear-gradient(135deg, #1e1e2e, #2a1f3d);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 6rem;
+        opacity: 0.6;
+        position: relative;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        transition: box-shadow 0.3s;
+    }
+
+    .cover-art img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        position: absolute;
+        inset: 0;
+    }
+
+    .cover-art.playing {
+        animation: coverPulse 2s ease-in-out infinite;
+    }
+
+    @keyframes coverPulse {
+
+        0%,
+        100% {
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        50% {
+            box-shadow: 0 20px 80px rgba(200, 169, 110, 0.25);
+        }
+    }
+
+    .cover-hint {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: rgba(0, 0, 0, 0.7);
+        text-align: center;
+        padding: 0.5rem;
+        font-size: 0.75rem;
+        color: var(--muted);
+        opacity: 0;
+        transition: opacity 0.2s;
+        cursor: pointer;
+    }
+
+    .cover-art:hover .cover-hint {
+        opacity: 1;
+    }
+
+    .song-info-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    #title-input {
+        font-family: 'Playfair Display', serif;
+        font-size: 2.2rem;
+        background: transparent;
+        border: none;
+        border-bottom: 2px solid transparent;
+        color: var(--text);
+        width: 100%;
+        outline: none;
+        transition: border-color 0.2s;
+    }
+
+    #title-input:focus {
+        border-color: var(--accent);
+    }
+
+    .song-meta-row {
+        color: var(--muted);
+        font-size: 0.875rem;
+    }
+
+    .song-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+    }
+
+    .tag {
+        padding: 0.25rem 0.8rem;
+        border-radius: 20px;
+        border: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 0.75rem;
+    }
+
+    /* Player */
+    .player {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 1.5rem;
+    }
+
+    .progress-container {
+        position: relative;
+        height: 4px;
+        background: var(--border);
+        border-radius: 2px;
+        cursor: pointer;
+        margin: 1rem 0 0.5rem;
+        transition: height 0.1s;
+    }
+
+    .progress-container:hover {
+        height: 6px;
+    }
+
+    .progress-fill {
+        height: 100%;
+        background: var(--accent);
+        border-radius: 2px;
+        pointer-events: none;
+    }
+
+    .progress-thumb {
+        position: absolute;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: 14px;
+        height: 14px;
+        background: var(--accent);
+        border-radius: 50%;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.15s;
+    }
+
+    .progress-container:hover .progress-thumb {
+        opacity: 1;
+    }
+
+    .time-display {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.75rem;
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+    }
+
+    .controls {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1.5rem;
+        margin: 1.2rem 0;
+    }
+
+    .ctrl-btn {
+        background: none;
+        border: none;
+        color: var(--muted);
+        cursor: pointer;
+        font-size: 1.1rem;
+        padding: 0.5rem;
+        border-radius: 50%;
+        transition: color 0.15s, background 0.15s;
+    }
+
+    .ctrl-btn:hover {
+        color: var(--text);
+        background: var(--border);
+    }
+
+    .play-btn {
+        width: 56px;
+        height: 56px;
+        background: var(--accent);
+        border: none;
+        border-radius: 50%;
+        color: #0a0a0f;
+        font-size: 1.4rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: transform 0.15s, background 0.15s;
+        box-shadow: 0 4px 20px rgba(200, 169, 110, 0.3);
+    }
+
+    .play-btn:hover {
+        transform: scale(1.08);
+        background: #d4b87a;
+    }
+
+    .volume-row {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        padding-top: 0.8rem;
+        border-top: 1px solid var(--border);
+    }
+
+    .volume-row span {
+        color: var(--muted);
+    }
+
+    input[type=range] {
+        flex: 1;
+        -webkit-appearance: none;
+        height: 3px;
+        background: var(--border);
+        border-radius: 2px;
+        outline: none;
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 14px;
+        height: 14px;
+        background: var(--accent);
+        border-radius: 50%;
+        cursor: pointer;
+    }
+
+    .actions-row {
+        display: flex;
+        gap: 0.8rem;
+        flex-wrap: wrap;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:1.5rem;">
+    <a href="/library/" class="btn btn-ghost" style="font-size:0.8rem;">← Library</a>
+</div>
+
+<div id="loading" style="text-align:center;padding:5rem;">
+    <div class="spinner" style="width:40px;height:40px;margin:0 auto 1rem;"></div>
+    <p style="color:var(--muted);">Loading song…</p>
+</div>
+
+<div class="song-layout" id="layout" style="display:none;">
+    <div>
+        <div class="cover-art" id="cover-art">
+            <span>♪</span>
+            <div class="cover-hint" onclick="openCoverModal()">📷 Change cover</div>
+        </div>
+    </div>
+
+    <div class="song-info-panel">
+        <div>
+            <input type="text" id="title-input" onblur="saveTitle()" />
+            <div class="song-meta-row" id="song-creator"></div>
+            <div class="song-tags" id="song-tags"></div>
+        </div>
+
+        <div class="player">
+            <div class="progress-container" id="prog-bar" onclick="seek(event)">
+                <div class="progress-fill" id="prog-fill" style="width:0%"></div>
+                <div class="progress-thumb" id="prog-thumb" style="left:0%"></div>
+            </div>
+            <div class="time-display">
+                <span id="t-cur">0:00</span>
+                <span id="t-tot">0:00</span>
+            </div>
+            <div class="controls">
+                <button class="ctrl-btn" onclick="skip(-10)" title="−10s">⟨⟨</button>
+                <button class="play-btn" id="play-btn" onclick="togglePlay()">▶</button>
+                <button class="ctrl-btn" onclick="skip(10)" title="+10s">⟩⟩</button>
+            </div>
+            <div class="volume-row">
+                <span>🔈</span>
+                <input type="range" min="0" max="1" step="0.05" value="1" oninput="setVol(this.value)" />
+                <span>🔊</span>
+            </div>
+        </div>
+
+        <div class="actions-row">
+            <button class="btn btn-ghost" onclick="shareSong()">↗ Share</button>
+            <button class="btn btn-ghost" onclick="dlSong()">↓ Download</button>
+            <a id="desc-link" href="#" class="btn btn-ghost">📋 Description</a>
+        </div>
+    </div>
+</div>
+
+<!-- Modals -->
+<div class="modal-overlay" id="share-modal">
+    <div class="modal">
+        <h3>Share Song</h3>
+        <div class="share-link-box">
+            <input type="text" id="share-input" readonly />
+            <button class="btn btn-primary" onclick="copyLink()">Copy</button>
+        </div>
+        <div style="margin-top:1.5rem;text-align:right;">
+            <button class="btn btn-ghost" onclick="closeModal('share-modal')">Close</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="cover-modal">
+    <div class="modal">
+        <h3>Update Cover Image</h3>
+        <div class="field" style="margin-top:1rem;">
+            <label>Image URL</label>
+            <input type="text" id="cover-url" placeholder="https://…"
+                style="padding:0.7rem 1rem;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);width:100%;font-size:0.9rem;" />
+        </div>
+        <div style="margin-top:1.5rem;display:flex;gap:0.8rem;justify-content:flex-end;">
+            <button class="btn btn-ghost" onclick="closeModal('cover-modal')">Cancel</button>
+            <button class="btn btn-primary" onclick="saveCover()">Save</button>
+        </div>
+    </div>
+</div>
+
+<audio id="audio"></audio>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    const API = '/api';
+    const SONG_ID = {{ song_id }};
+    const audio = document.getElementById('audio');
+    let songData = null;
+
+    async function load() {
+        try {
+            const res = await fetch(`${API}/songs/${SONG_ID}/`);
+            songData = await res.json();
+
+            document.getElementById('title-input').value = songData.title;
+            document.getElementById('song-creator').textContent = `by ${songData.created_by}`;
+            document.getElementById('desc-link').href = `/songs/${SONG_ID}/description/`;
+
+            if (songData.cover_image) {
+                document.getElementById('cover-art').innerHTML =
+                    `<img src="${songData.cover_image}" alt="${songData.title}">
+           <div class="cover-hint" onclick="openCoverModal()">📷 Change cover</div>`;
+            }
+
+            if (songData.song_link) { audio.src = songData.song_link; audio.load(); }
+
+            // Tags from description
+            try {
+                const dr = await fetch(`${API}/songs/${SONG_ID}/description/`);
+                const dd = await dr.json();
+                if (dd.form_details) {
+                    const tags = [dd.form_details.genre, dd.form_details.occasion, dd.form_details.mood].filter(Boolean);
+                    document.getElementById('song-tags').innerHTML = tags.map(t => `<span class="tag">${t}</span>`).join('');
+                }
+            } catch { }
+
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('layout').style.display = 'grid';
+        } catch (e) {
+            document.getElementById('loading').innerHTML = `<p style="color:var(--fail)">${e.message}</p>`;
+        }
+    }
+
+    // FR16: play/pause
+    function togglePlay() {
+        if (audio.paused) {
+            audio.play();
+            document.getElementById('play-btn').textContent = '⏸';
+            document.getElementById('cover-art').classList.add('playing');
+        } else {
+            audio.pause();
+            document.getElementById('play-btn').textContent = '▶';
+            document.getElementById('cover-art').classList.remove('playing');
+        }
+    }
+
+    // FR15: skip
+    function skip(s) { audio.currentTime = Math.max(0, Math.min(audio.currentTime + s, audio.duration || 0)); }
+
+    // FR14: seek
+    function seek(e) {
+        if (!audio.duration) return;
+        const r = document.getElementById('prog-bar').getBoundingClientRect();
+        audio.currentTime = ((e.clientX - r.left) / r.width) * audio.duration;
+    }
+
+    function setVol(v) { audio.volume = v; }
+
+    // FR13: time display
+    audio.addEventListener('timeupdate', () => {
+        if (!audio.duration) return;
+        const p = (audio.currentTime / audio.duration) * 100;
+        document.getElementById('prog-fill').style.width = p + '%';
+        document.getElementById('prog-thumb').style.left = p + '%';
+        document.getElementById('t-cur').textContent = fmt(audio.currentTime);
+    });
+    audio.addEventListener('loadedmetadata', () => {
+        document.getElementById('t-tot').textContent = fmt(audio.duration);
+    });
+    audio.addEventListener('ended', () => {
+        document.getElementById('play-btn').textContent = '▶';
+        document.getElementById('cover-art').classList.remove('playing');
+    });
+
+    function fmt(s) {
+        if (!s || isNaN(s)) return '0:00';
+        return `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+    }
+
+    // FR9: edit title
+    async function saveTitle() {
+        const t = document.getElementById('title-input').value.trim();
+        if (!t || t === songData?.title) return;
+        await fetch(`${API}/songs/${SONG_ID}/`, {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: t }),
+        });
+        showToast('Song name updated', 'success');
+    }
+
+    // Share
+    async function shareSong() {
+        const res = await fetch(`${API}/songs/${SONG_ID}/share/`, { method: 'POST' });
+        const data = await res.json();
+        document.getElementById('share-input').value = `${location.origin}/shared/${SONG_ID}/`;
+        document.getElementById('share-modal').classList.add('open');
+    }
+    function copyLink() {
+        navigator.clipboard.writeText(document.getElementById('share-input').value)
+            .then(() => { showToast('Copied!', 'success'); closeModal('share-modal'); });
+    }
+
+    // Download
+    async function dlSong() {
+        const res = await fetch(`${API}/songs/${SONG_ID}/download/`);
+        const data = await res.json();
+        const a = document.createElement('a');
+        a.href = data.download_url; a.download = `${data.title}.mp3`; a.target = '_blank'; a.click();
+        showToast('Download started', 'success');
+    }
+
+    // Cover
+    function openCoverModal() { document.getElementById('cover-modal').classList.add('open'); }
+    async function saveCover() {
+        const url = document.getElementById('cover-url').value.trim();
+        if (!url) { showToast('Enter an image URL', 'error'); return; }
+        await fetch(`${API}/songs/${SONG_ID}/cover/`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ cover_image_url: url }),
+        });
+        document.getElementById('cover-art').innerHTML =
+            `<img src="${url}"><div class="cover-hint" onclick="openCoverModal()">📷 Change cover</div>`;
+        closeModal('cover-modal');
+        showToast('Cover updated', 'success');
+    }
+
+    function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+    document.querySelectorAll('.modal-overlay').forEach(m =>
+        m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); }));
+
+    load();
+</script>
+{% endblock %}

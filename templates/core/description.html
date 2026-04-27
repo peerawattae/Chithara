@@ -1,0 +1,330 @@
+{% extends "core/base.html" %}
+{% block title %}Description — Chitra{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .desc-layout {
+        display: grid;
+        grid-template-columns: 260px 1fr;
+        gap: 2.5rem;
+        align-items: start;
+    }
+
+    @media(max-width:760px) {
+        .desc-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .desc-cover {
+        aspect-ratio: 1;
+        border-radius: var(--radius);
+        overflow: hidden;
+        background: linear-gradient(135deg, #1e1e2e, #2a1f3d);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 5rem;
+        opacity: 0.6;
+        position: relative;
+        box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+    }
+
+    .desc-cover img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        position: absolute;
+        inset: 0;
+        opacity: 1;
+    }
+
+    .play-fab {
+        position: absolute;
+        bottom: 1rem;
+        right: 1rem;
+        width: 44px;
+        height: 44px;
+        background: var(--accent);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #0a0a0f;
+        text-decoration: none;
+        font-size: 1rem;
+        box-shadow: 0 4px 16px rgba(200, 169, 110, 0.4);
+        transition: transform 0.15s;
+    }
+
+    .play-fab:hover {
+        transform: scale(1.1);
+    }
+
+    .desc-content {
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+    }
+
+    .desc-title {
+        font-family: 'Playfair Display', serif;
+        font-size: 2rem;
+        font-weight: 400;
+    }
+
+    .desc-creator {
+        color: var(--muted);
+        font-size: 0.875rem;
+        margin-top: 0.3rem;
+    }
+
+    .info-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        overflow: hidden;
+    }
+
+    .info-header {
+        padding: 0.9rem 1.5rem;
+        border-bottom: 1px solid var(--border);
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--accent);
+        font-weight: 500;
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .info-cell {
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid var(--border);
+        border-right: 1px solid var(--border);
+    }
+
+    .info-cell:nth-child(even) {
+        border-right: none;
+    }
+
+    .info-cell:last-child,
+    .info-cell:nth-last-child(2):nth-child(odd) {
+        border-bottom: none;
+    }
+
+    .info-full {
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid var(--border);
+        grid-column: 1/-1;
+    }
+
+    .info-full:last-child {
+        border-bottom: none;
+    }
+
+    .cell-label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+        margin-bottom: 0.3rem;
+    }
+
+    .cell-value {
+        font-size: 0.9rem;
+        color: var(--text);
+        line-height: 1.5;
+    }
+
+    .desc-actions {
+        display: flex;
+        gap: 0.8rem;
+        flex-wrap: wrap;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:1.5rem;display:flex;gap:1rem;">
+    <a href="/library/" class="btn btn-ghost" style="font-size:0.8rem;">← Library</a>
+    <a href="/songs/{{ song_id }}/" class="btn btn-ghost" style="font-size:0.8rem;">▶ Player</a>
+</div>
+
+<div id="loading" style="text-align:center;padding:5rem;">
+    <div class="spinner" style="width:40px;height:40px;margin:0 auto 1rem;"></div>
+    <p style="color:var(--muted);">Loading…</p>
+</div>
+
+<div class="desc-layout" id="layout" style="display:none;">
+    <div>
+        <div class="desc-cover" id="desc-cover">
+            <span>♪</span>
+            <a href="/songs/{{ song_id }}/" class="play-fab">▶</a>
+        </div>
+    </div>
+
+    <div class="desc-content">
+        <div>
+            <h1 class="desc-title" id="d-title">—</h1>
+            <div class="desc-creator" id="d-creator"></div>
+            <div style="margin-top:0.8rem;display:flex;align-items:center;gap:1rem;">
+                <span id="d-badge"></span>
+                <span style="color:var(--muted);font-size:0.8rem;" id="d-date"></span>
+            </div>
+        </div>
+
+        <!-- Song output -->
+        <div class="info-card">
+            <div class="info-header">Song Details</div>
+            <div class="info-grid">
+                <div class="info-cell">
+                    <div class="cell-label">Duration</div>
+                    <div class="cell-value" id="d-dur">—</div>
+                </div>
+                <div class="info-cell">
+                    <div class="cell-label">Status</div>
+                    <div class="cell-value" id="d-status">—</div>
+                </div>
+                <div class="info-full">
+                    <div class="cell-label">Audio</div>
+                    <div class="cell-value">
+                        <a id="d-link" href="#" target="_blank"
+                            style="color:var(--accent);word-break:break-all;font-size:0.8rem;">—</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form details FR18 -->
+        <div class="info-card">
+            <div class="info-header">Generation Parameters</div>
+            <div class="info-grid">
+                <div class="info-cell">
+                    <div class="cell-label">Genre</div>
+                    <div class="cell-value" id="d-genre">—</div>
+                </div>
+                <div class="info-cell">
+                    <div class="cell-label">Voice Type</div>
+                    <div class="cell-value" id="d-voice">—</div>
+                </div>
+                <div class="info-cell">
+                    <div class="cell-label">Occasion</div>
+                    <div class="cell-value" id="d-occasion">—</div>
+                </div>
+                <div class="info-cell">
+                    <div class="cell-label">Mood</div>
+                    <div class="cell-value" id="d-mood">—</div>
+                </div>
+                <div class="info-full">
+                    <div class="cell-label">Details</div>
+                    <div class="cell-value" id="d-detail">—</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="desc-actions">
+            <a href="/songs/{{ song_id }}/" class="btn btn-primary">▶ Play Song</a>
+            <button class="btn btn-ghost" onclick="share()">↗ Share</button>
+            <button class="btn btn-ghost" onclick="dl()">↓ Download</button>
+        </div>
+    </div>
+</div>
+
+<!-- Share modal -->
+<div class="modal-overlay" id="share-modal">
+    <div class="modal">
+        <h3>Share Song</h3>
+        <div class="share-link-box">
+            <input type="text" id="share-input" readonly />
+            <button class="btn btn-primary" onclick="copyLink()">Copy</button>
+        </div>
+        <div style="margin-top:1.5rem;text-align:right;">
+            <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    const API = '/api';
+    const SONG_ID = {{ song_id }};
+
+    function fmt(s) {
+        if (!s) return '—';
+        return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+    }
+
+    async function load() {
+        try {
+            const res = await fetch(`${API}/songs/${SONG_ID}/description/`);
+            const data = await res.json();
+            const s = data.song;
+            const f = data.form_details;
+
+            document.getElementById('d-title').textContent = s.title;
+            document.getElementById('d-creator').textContent = `by ${s.created_by}`;
+            document.getElementById('d-badge').innerHTML = statusBadge(s.status);
+            document.getElementById('d-date').textContent = `Created ${new Date(s.created_at).toLocaleDateString()}`;
+
+            if (s.cover_image) {
+                document.getElementById('desc-cover').innerHTML =
+                    `<img src="${s.cover_image}" alt="${s.title}">
+           <a href="/songs/${SONG_ID}/" class="play-fab">▶</a>`;
+            }
+
+            document.getElementById('d-dur').textContent = fmt(s.duration);
+            document.getElementById('d-status').innerHTML = statusBadge(s.status);
+            if (s.status === 'failed' && s.error_message) {
+                document.getElementById('d-status').innerHTML += `<div style="margin-top:0.5rem;padding:0.5rem;background:rgba(180,20,20,0.1);border:1px solid rgba(180,20,20,0.2);border-radius:4px;color:var(--fail);font-size:0.75rem;" title="Failure reasoning">${s.error_message}</div>`;
+            }
+            const lnk = document.getElementById('d-link');
+            lnk.href = s.song_link || '#';
+            lnk.textContent = s.song_link ? 'Open audio ↗' : 'Not available';
+
+            if (f) {
+                document.getElementById('d-genre').textContent = f.genre || '—';
+                document.getElementById('d-voice').textContent = f.voice_type || '—';
+                document.getElementById('d-occasion').textContent = f.occasion || '—';
+                document.getElementById('d-mood').textContent = f.mood || '—';
+                document.getElementById('d-detail').textContent = f.detail || '—';
+            }
+
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('layout').style.display = 'grid';
+        } catch (e) {
+            document.getElementById('loading').innerHTML =
+                `<p style="color:var(--fail)">${e.message}</p>`;
+        }
+    }
+
+    async function share() {
+        await fetch(`${API}/songs/${SONG_ID}/share/`, { method: 'POST' });
+        document.getElementById('share-input').value = `${location.origin}/shared/${SONG_ID}/`;
+        document.getElementById('share-modal').classList.add('open');
+    }
+
+    async function dl() {
+        const res = await fetch(`${API}/songs/${SONG_ID}/download/`);
+        const data = await res.json();
+        const a = document.createElement('a');
+        a.href = data.download_url; a.download = `${data.title}.mp3`; a.target = '_blank'; a.click();
+    }
+
+    function copyLink() {
+        navigator.clipboard.writeText(document.getElementById('share-input').value)
+            .then(() => { showToast('Copied!', 'success'); closeModal(); });
+    }
+
+    function closeModal() { document.getElementById('share-modal').classList.remove('open'); }
+    document.getElementById('share-modal').addEventListener('click', function (e) {
+        if (e.target === this) closeModal();
+    });
+
+    load();
+</script>
+{% endblock %}

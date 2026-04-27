@@ -1,0 +1,478 @@
+{% extends "core/base.html" %}
+{% block title %}Create Song — Chitra{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .create-layout {
+        display: grid;
+        grid-template-columns: 1fr 360px;
+        gap: 2rem;
+        align-items: start;
+    }
+
+    @media(max-width:860px) {
+        .create-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .form-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 2rem;
+    }
+
+    .form-card h2 {
+        font-family: 'Playfair Display', serif;
+        font-size: 1.8rem;
+        font-weight: 400;
+        margin-bottom: 0.4rem;
+    }
+
+    .form-card h2 span {
+        color: var(--accent);
+    }
+
+    .form-subtitle {
+        color: var(--muted);
+        font-size: 0.875rem;
+        margin-bottom: 2rem;
+    }
+
+    .field {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        margin-bottom: 1.2rem;
+    }
+
+    .field label {
+        font-size: 0.78rem;
+        font-weight: 500;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+    }
+
+    .field label span {
+        color: var(--accent);
+    }
+
+    .field input,
+    .field select,
+    .field textarea {
+        padding: 0.7rem 1rem;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        color: var(--text);
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.9rem;
+        transition: border-color 0.2s;
+    }
+
+    .field input:focus,
+    .field select:focus,
+    .field textarea:focus {
+        outline: none;
+        border-color: var(--accent);
+    }
+
+    .field select option {
+        background: var(--surface);
+    }
+
+    .field textarea {
+        resize: vertical;
+        min-height: 80px;
+    }
+
+    .field-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+
+    /* Steps */
+    .steps {
+        display: flex;
+        align-items: center;
+        margin-bottom: 2rem;
+    }
+
+    .step {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.8rem;
+        color: var(--muted);
+    }
+
+    .step.active {
+        color: var(--accent);
+    }
+
+    .step-num {
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        border: 1px solid currentColor;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+
+    .step.active .step-num {
+        background: var(--accent);
+        color: #0a0a0f;
+        border-color: var(--accent);
+    }
+
+    .step.done .step-num {
+        background: var(--success);
+        color: #fff;
+        border-color: var(--success);
+    }
+
+    .step-line {
+        flex: 1;
+        height: 1px;
+        background: var(--border);
+        margin: 0 0.5rem;
+    }
+
+    /* Review panel */
+    .review-panel {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 1.5rem;
+        position: sticky;
+        top: 80px;
+    }
+
+    .review-panel h3 {
+        font-family: 'Playfair Display', serif;
+        font-size: 1.1rem;
+        color: var(--accent);
+        margin-bottom: 1.2rem;
+        padding-bottom: 0.8rem;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .review-item {
+        margin-bottom: 1rem;
+    }
+
+    .review-label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+    }
+
+    .review-value {
+        font-size: 0.9rem;
+        color: var(--text);
+        margin-top: 0.15rem;
+    }
+
+    .review-empty {
+        color: var(--muted);
+        font-style: italic;
+        font-size: 0.85rem;
+    }
+
+    .submit-area {
+        margin-top: 1.5rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        gap: 0.8rem;
+    }
+
+    .quota-info {
+        font-size: 0.8rem;
+        color: var(--muted);
+        text-align: center;
+    }
+
+    .quota-bar {
+        height: 4px;
+        background: var(--border);
+        border-radius: 2px;
+        overflow: hidden;
+        margin-bottom: 0.3rem;
+    }
+
+    .quota-fill {
+        height: 100%;
+        background: var(--accent);
+        border-radius: 2px;
+        transition: width 0.3s;
+    }
+
+    /* Generating overlay */
+    .gen-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(10, 10, 15, 0.88);
+        z-index: 999;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .gen-overlay.active {
+        display: flex;
+    }
+
+    .gen-overlay h3 {
+        font-family: 'Playfair Display', serif;
+        font-size: 1.5rem;
+        color: var(--accent);
+    }
+
+    .gen-overlay p {
+        color: var(--muted);
+        font-size: 0.875rem;
+    }
+
+    .big-spinner {
+        width: 60px;
+        height: 60px;
+        border: 3px solid var(--border);
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="steps">
+    <div class="step active" id="si1">
+        <div class="step-num">1</div><span>Fill Form</span>
+    </div>
+    <div class="step-line"></div>
+    <div class="step" id="si2">
+        <div class="step-num">2</div><span>Review</span>
+    </div>
+    <div class="step-line"></div>
+    <div class="step" id="si3">
+        <div class="step-num">3</div><span>Generate</span>
+    </div>
+</div>
+
+<div class="create-layout">
+    <div class="form-card">
+        <h2>Create a <span>New Song</span></h2>
+        <p class="form-subtitle">Fill in the details below and let AI compose your song.</p>
+
+        <div class="field">
+            <label>Title <span>*</span></label>
+            <input type="text" id="f-title" placeholder="e.g. Morning Vibes" oninput="sync()" />
+        </div>
+
+        <div class="field-row">
+            <div class="field">
+                <label>Genre <span>*</span></label>
+                <select id="f-genre" onchange="sync()">
+                    <option value="">Select…</option>
+                    <option value="pop">Pop</option>
+                    <option value="hiphop">Hip-Hop</option>
+                    <option value="rock">Rock</option>
+                    <option value="reggae">Reggae</option>
+                    <option value="country">Country</option>
+                    <option value="rnb">R&B</option>
+                    <option value="edm">EDM</option>
+                </select>
+            </div>
+            <div class="field">
+                <label>Voice Type <span>*</span></label>
+                <input type="text" id="f-voice" placeholder="e.g. female" oninput="sync()" />
+            </div>
+        </div>
+
+        <div class="field">
+            <label>Occasion <span>*</span></label>
+            <input type="text" id="f-occasion" placeholder="e.g. birthday, casual" oninput="sync()" />
+        </div>
+
+        <div class="field">
+            <label>Mood <span>*</span></label>
+            <input type="text" id="f-mood" placeholder="e.g. light mood like sipping tea on a cold morning"
+                oninput="sync()" />
+        </div>
+
+        <div class="field">
+            <label>Additional Details</label>
+            <textarea id="f-detail" placeholder="e.g. soft acoustic guitar, no drums…" oninput="sync()"></textarea>
+        </div>
+
+        <div style="display:flex;gap:0.8rem;margin-top:0.5rem;">
+            <button class="btn btn-ghost" onclick="clearForm()" style="flex:1">Clear</button>
+            <button class="btn btn-primary" onclick="reviewForm()" style="flex:2">Review →</button>
+        </div>
+    </div>
+
+    <!-- Review panel -->
+    <div class="review-panel">
+        <h3>Review Your Song</h3>
+        <div class="review-item">
+            <div class="review-label">Title</div>
+            <div class="review-value" id="rv-title"><span class="review-empty">Not set</span></div>
+        </div>
+        <div class="review-item">
+            <div class="review-label">Genre</div>
+            <div class="review-value" id="rv-genre"><span class="review-empty">Not set</span></div>
+        </div>
+        <div class="review-item">
+            <div class="review-label">Voice Type</div>
+            <div class="review-value" id="rv-voice"><span class="review-empty">Not set</span></div>
+        </div>
+        <div class="review-item">
+            <div class="review-label">Occasion</div>
+            <div class="review-value" id="rv-occasion"><span class="review-empty">Not set</span></div>
+        </div>
+        <div class="review-item">
+            <div class="review-label">Mood</div>
+            <div class="review-value" id="rv-mood"><span class="review-empty">Not set</span></div>
+        </div>
+        <div class="review-item">
+            <div class="review-label">Details</div>
+            <div class="review-value" id="rv-detail"><span class="review-empty">None</span></div>
+        </div>
+
+        <div class="submit-area">
+            <div class="quota-bar">
+                <div class="quota-fill" id="qfill" style="width:0%"></div>
+            </div>
+            <div class="quota-info" id="qinfo">Loading quota…</div>
+            <button class="btn btn-primary" id="gen-btn" onclick="generate()" disabled
+                style="width:100%;justify-content:center;">✦ Generate Song</button>
+        </div>
+    </div>
+</div>
+
+<!-- Generating overlay (FR7) -->
+<div class="gen-overlay" id="gen-overlay">
+    <div class="big-spinner"></div>
+    <h3>Composing your song…</h3>
+    <p>Sit back — AI is generating your music.</p>
+    <p id="gen-status" style="color:var(--accent);font-size:0.8rem;margin-top:0.5rem;"></p>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    const API = '/api';
+    const DOMAIN_UID = {{ user.id|default:"null" }};
+
+    function rv(id, val) {
+        document.getElementById(id).innerHTML = val
+            ? val : `<span class="review-empty">Not set</span>`;
+    }
+
+    function sync() {
+        rv('rv-title', document.getElementById('f-title').value);
+        rv('rv-genre', document.getElementById('f-genre').value);
+        rv('rv-voice', document.getElementById('f-voice').value);
+        rv('rv-occasion', document.getElementById('f-occasion').value);
+        rv('rv-mood', document.getElementById('f-mood').value);
+        const det = document.getElementById('f-detail').value;
+        document.getElementById('rv-detail').innerHTML =
+            det ? det : `<span class="review-empty">None</span>`;
+    }
+
+    function payload() {
+        return {
+            title: document.getElementById('f-title').value.trim(),
+            genre: document.getElementById('f-genre').value,
+            voice_type: document.getElementById('f-voice').value.trim(),
+            occasion: document.getElementById('f-occasion').value.trim(),
+            mood: document.getElementById('f-mood').value.trim(),
+            detail: document.getElementById('f-detail').value.trim(),
+        };
+    }
+
+    // FR2: review before generate
+    async function reviewForm() {
+        const p = payload();
+        const missing = ['title', 'genre', 'voice_type', 'occasion', 'mood'].filter(f => !p[f]);
+        if (missing.length) { showToast(`Fill in: ${missing.join(', ')}`, 'error'); return; }
+
+        try {
+            const res = await fetch(`${API}/song-forms/review/`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(p),
+            });
+            await res.json();
+            showToast('Looks good — ready to generate!', 'success');
+            document.getElementById('gen-btn').disabled = false;
+            // Step indicator
+            const s1 = document.getElementById('si1');
+            s1.classList.remove('active'); s1.classList.add('done');
+            s1.querySelector('.step-num').textContent = '✓';
+            document.getElementById('si2').classList.add('active');
+        } catch (e) { showToast('Review failed: ' + e.message, 'error'); }
+    }
+
+    // Generate
+    async function generate() {
+        if (!DOMAIN_UID) { showToast('Not logged in', 'error'); return; }
+        const p = { ...payload(), user_id: DOMAIN_UID };
+
+        document.getElementById('gen-overlay').classList.add('active');
+        document.getElementById('si3').classList.add('active');
+
+        try {
+            const res = await fetch(`${API}/song-forms/`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(p),
+            });
+            const data = await res.json();
+            document.getElementById('gen-overlay').classList.remove('active');
+
+            // Background generation — redirect to library to see progress
+            showToast('Song queued! Generating in background 🎵', 'success');
+            setTimeout(() => { window.location.href = '/library/'; }, 1500);
+
+        } catch (e) {
+            document.getElementById('gen-overlay').classList.remove('active');
+            showToast('Error: ' + e.message, 'error');
+        }
+    }
+
+    function clearForm() {
+        ['f-title', 'f-voice', 'f-occasion', 'f-mood', 'f-detail'].forEach(id =>
+            document.getElementById(id).value = '');
+        document.getElementById('f-genre').value = '';
+        document.getElementById('gen-btn').disabled = true;
+        sync();
+    }
+
+    async function loadQuota() {
+        if (!DOMAIN_UID) return;
+        try {
+            const res = await fetch(`${API}/creators/`);
+            const list = await res.json();
+            const c = list.find(x => x.id === DOMAIN_UID);
+            if (c) {
+                const used = 20 - (c.quota || 0);
+                document.getElementById('qfill').style.width = (used / 20 * 100) + '%';
+                document.getElementById('qinfo').textContent = `${c.quota} / 20 generations remaining today`;
+            }
+        } catch { document.getElementById('qinfo').textContent = ''; }
+    }
+
+    sync();
+    loadQuota();
+</script>
+{% endblock %}
