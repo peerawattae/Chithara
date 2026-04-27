@@ -6,3 +6,9 @@ def library_page(request):
 
 def create_page(request):
     return render(request, "core/create.html")
+
+def song_page(request, pk):
+    return render(request, "core/song.html", {"song_id": pk})
+
+def description_page(request, pk):
+    return render(request, "core/description.html", {"song_id": pk})
