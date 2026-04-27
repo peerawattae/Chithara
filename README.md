@@ -70,21 +70,28 @@ SongGeneratorStrategy  (abstract base class)
 └── SunoSongGeneratorStrategy   → calls api.sunoapi.org, polls for result
 ```
 
+
 The active strategy is selected via the `GENERATOR_STRATEGY` environment variable, read in `music_ai/settings.py`. Strategy selection is centralized in `core/generation/factory.py` — no if/else logic is scattered elsewhere.
 
 ---
 
-### Setting up the Suno API Key
+### Setting up Environment Variables (Suno API & Google OAuth)
 
-1. Sign up at [sunoapi.org](https://sunoapi.org) and get your API key from the dashboard.
+1. **Suno API Key**: Sign up at [sunoapi.org](https://sunoapi.org) and get your API key from the dashboard.
+2. **Google OAuth**: Set up a Google Cloud Console project, configure the OAuth consent screen, and create OAuth 2.0 Client credentials to get your Client ID and Client Secret. Ensure your authorized redirect URIs are configured correctly (e.g., `http://127.0.0.1:8000/social-auth/complete/google-oauth2/`).
 
-2. Create a `.env` file in the project root (never commit this file):
-   ```
-   SUNO_API_KEY=your_actual_key_here
+3. Create a `.env` file in the project root (never commit this file):
+   ```env
+   # Suno API Configuration
+   SUNO_API_KEY=your_actual_suno_key_here
    GENERATOR_STRATEGY=suno
+   
+   # Google OAuth Configuration
+   GOOGLE_OAUTH2_KEY=your_google_client_id_here
+   GOOGLE_OAUTH2_SECRET=your_google_client_secret_here
    ```
 
-3. `.env` is already listed in `.gitignore` — your key will not be committed.
+4. `.env` is already listed in `.gitignore` — your keys will not be committed.
 
 ---
 
