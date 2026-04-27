@@ -106,7 +106,6 @@
     }
 
     @keyframes coverPulse {
-
         0%,
         100% {
             opacity: 0.5;
@@ -114,6 +113,21 @@
 
         50% {
             opacity: 0.8;
+        }
+    }
+
+    @keyframes loadingBar {
+        0% {
+            left: -30%;
+            width: 30%;
+        }
+        50% {
+            left: 30%;
+            width: 40%;
+        }
+        100% {
+            left: 100%;
+            width: 30%;
         }
     }
 
@@ -258,7 +272,19 @@
         <div class="song-cover" onclick="${isReady ? `goTo(${song.id})` : ''}">
           ${cover}
           ${isReady ? `<div class="play-overlay"><div class="play-btn-overlay">▶</div></div>` : ''}
-          ${isGenerating ? `<div style="position:absolute;bottom:0.5rem;left:0;right:0;text-align:center;font-size:0.7rem;color:var(--muted)"><span class="spinner" style="width:14px;height:14px;margin-right:4px;vertical-align:middle;"></span>Generating…</div>` : ''}
+          ${isGenerating ? `
+          <div style="position:absolute;inset:0;background:rgba(0,0,0,0.65);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:2;">
+            <div style="color:var(--accent);font-size:0.875rem;font-weight:500;margin-bottom:0.8rem;letter-spacing:0.05em;text-transform:uppercase;">Generating…</div>
+            <div style="width:70%;height:4px;background:rgba(255,255,255,0.15);border-radius:2px;overflow:hidden;position:relative;">
+               <div style="position:absolute;top:0;height:100%;background:var(--accent);border-radius:2px;animation:loadingBar 1.5s infinite linear;"></div>
+            </div>
+            <div style="font-size:0.7rem;color:var(--muted);margin-top:0.6rem;">Please wait</div>
+          </div>` : ''}
+          ${song.status === 'failed' ? `
+          <div style="position:absolute;inset:0;background:rgba(180,20,20,0.8);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:2;padding:1rem;text-align:center;">
+            <div style="color:#ffcccc;font-size:0.875rem;font-weight:600;margin-bottom:0.4rem;text-transform:uppercase;">Failed</div>
+            <div style="font-size:0.65rem;color:#ffe6e6;line-height:1.4;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;" title="${song.error_message || 'Unknown error'}">${song.error_message || 'Generation failed'}</div>
+          </div>` : ''}
         </div>
         <div class="song-info">
           <div class="song-title" title="${song.title}">${song.title}</div>
@@ -343,6 +369,7 @@
                     const card = document.getElementById(`card-${songId}`);
                     if (card) card.outerHTML = cardHTML(song);
                     if (song.status === 'success') showToast(`"${song.title}" is ready! 🎵`, 'success');
+                    if (song.status === 'failed')  showToast(`Failed generating "${song.title}": ${song.error_message || 'Error'}`, 'error');
                 }
             } catch { /* ignore poll errors */ }
         }, 5000); // poll every 5s

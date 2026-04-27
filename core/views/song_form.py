@@ -109,6 +109,7 @@ class SongFormListCreateView(View):
             except Exception as exc:
                 Song.objects.filter(pk=song_id).update(
                     status=GenerateStatus.FAILED,
+                    error_message=str(exc),
                 )
                 print(f"[Generation] Song {song_id} FAILED — {exc}")
 
