@@ -110,3 +110,64 @@ class SongDescriptionView(View):
                 "detail":     sf.detail     if sf else None,
             } if sf else None,
         })
+
+@method_decorator(csrf_exempt, name="dispatch")
+class SongShareView(View):
+    """
+    POST /api/songs/<id>/share/
+    Marks song as shared and returns a shareable URL (FR3).
+
+    GET /api/songs/shared/<id>/
+    Allows a Listener to access a shared song via link (UC6, UC7).
+    """
+    def post(self, request, pk):
+        try:
+            song = Song.objects.get(pk=pk)
+        except Song.DoesNotExist:
+            return not_found()
+
+        song.is_shared = True
+        song.save()
+
+        share_url = f"/api/songs/shared/{song.id}/"
+        return JsonResponse({
+            "song_id":   song.id,
+            "title":     song.title,
+            "share_url": share_url,
+            "message":   "Song shared successfully",
+        })
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class SharedSongView(View):
+    """
+    GET /api/songs/shared/<id>/
+    Public access to a shared song — no creator auth needed.
+    """
+    def get(self, request, pk):
+        try:
+            song = Song.objects.select_related("song_form").get(pk=pk)
+        except Song.DoesNotExist:
+            return not_found()
+
+        if not song.is_shared:
+            return JsonResponse(
+                {"error": "This song is not shared"},
+                status=403
+            )
+
+        sf = song.song_form
+        return JsonResponse({
+            "id":          song.id,
+            "title":       song.title,
+            "song_link":   song.song_link,
+            "duration":    song.duration,
+            "cover_image": song.cover_image,
+            "created_by":  song.created_by,
+            "form_details": {
+                "occasion":   sf.occasion,
+                "genre":      sf.genre,
+                "voice_type": sf.voice_type,
+                "mood":       sf.mood,
+            } if sf else None,
+        })
